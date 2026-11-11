@@ -669,6 +669,13 @@ img,svg{-webkit-user-drag:none}
 .pv.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
 .pv.fast{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
 .pv.slow{background:var(--surface-2);color:var(--ink-2)}
+
+.db-note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;display:grid;gap:4px}
+.db-note b{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-2)}
+.db-note p{font-size:14.5px;line-height:1.5;color:var(--ink)}
+.db-note.pending{display:flex;align-items:center;gap:10px;color:var(--ink-2);font-weight:600;font-size:14px}
+.db-note .typing{display:inline-flex;gap:4px}
+.db-saved{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--good);font-weight:700}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
@@ -1567,22 +1574,72 @@ function debrief(a) {
   } else next.push("Note ton effort ressenti : il m'aide à doser la suite.");
   if (a.pain >= 1) { const z = a.painZone && ZONES[a.painZone]; bad.push(`Gêne signalée${z ? ' : ' + z.label.toLowerCase() : ''}${a.pain > 1 ? ` (${a.pain}/10)` : ''}.`); next.push('Surveille-la : si elle revient ou change ta foulée, signale-la.'); }
   if (!s) { const W = S.plan && S.plan.weeks.find(x => a.date >= x.start && a.date <= x.end); if (W && W.deload) bad.push("Sortie en plus pendant une semaine allégée."); }
+  // 5. Compared with earlier runs
+  const prev = S.acts.filter(x => x.id !== a.id && x.date < a.date && actType(x) === actType(a) && x.paceSec && (x.paceKind || 'avg') === (a.paceKind || 'avg')).sort((x, y) => x.date < y.date ? 1 : -1)[0];
+  if (prev && p) {
+    const diff = prev.paceSec - p;
+    if (diff >= 5 && (!a.rpe || !prev.rpe || a.rpe <= prev.rpe)) good.push(`Progrès : ${fmtGap(diff)} plus rapide au km que ta dernière séance du même type (${fmtDM(prev.date)}), pour un effort égal ou moindre.`);
+    else if (diff <= -10 && a.rpe && prev.rpe && a.rpe > prev.rpe) bad.push(`Plus lent de ${fmtGap(-diff)} au km et plus dur que ta dernière séance du même type (${fmtDM(prev.date)}) : signe de fatigue.`);
+  }
+  if (a.distKm >= 3) { const longest = Math.max(0, ...S.acts.filter(x => x.id !== a.id && x.date <= a.date).map(x => x.distKm || 0)); if (longest > 0 && a.distKm > longest) good.push(`Record de distance : ${fmtKm(a.distKm, 1)} km, ta plus longue sortie jusqu'ici.`); }
+  if (sp.length && !easy) { const before = S.acts.filter(x => x.id !== a.id).flatMap(x => x.splits || []).filter(x => x > 0); const b = Math.min(...sp); if (before.length && b < Math.min(...before)) good.push(`Record : ton kilomètre le plus rapide, en ${fmtPace(b)}.`); }
+  const W0 = S.plan && S.plan.weeks.find(x => a.date >= x.start && a.date <= x.end);
+  if (W0) { const wi = weekInfo(W0); next.push(`Ta semaine : ${wi.done}/${wi.total} séances et ${fmtKm(wi.km)} km sur environ ${fmtKm(wi.plannedKm, 0)} prévus.`); }
   const pain = a.pain >= 4;
   const verdict = pain || bad.length >= 3 ? 'revoir' : bad.length === 0 && good.length ? 'top' : 'ok';
   const ns = allSessions().filter(x => x.date > a.date && !actFor(x.id) && !S.skips[x.id]).sort((x, y) => x.date < y.date ? -1 : 1)[0];
   if (!next.length && ns) next.push(`Prochaine séance : ${ns.title}, ${relDay(ns.date).toLowerCase()}.`);
   if (!good.length && !bad.length) good.push('Séance enregistrée : chaque sortie compte pour ta régularité.');
-  return { verdict, good, bad, next: next.slice(0, 2) };
+  return { verdict, good, bad, next: next.slice(0, 3) };
 }
 const VERDICT = { top: ['Séance réussie', 'good', 'happy'], ok: ['Bonne séance, à affiner', 'warn', 'neutral'], revoir: ['Séance à revoir', 'bad', 'worried'] };
 function debriefHTML(a) {
   const d = debrief(a), [lbl, cls, mood] = VERDICT[d.verdict], c = coachCfg();
   return `<section class="debrief">
     <div class="db-head"><span class="db-av">${coachSVG(c, mood, 44)}</span><div><span class="kl">Le bilan de ${esc(c.name)}</span><span class="pill ${cls}">${lbl}</span></div></div>
+    ${coachNoteHTML(a)}
     ${d.good.length ? `<div class="db-list"><p class="db-t good">Ce qui a bien marché</p><ul>${d.good.map(x => `<li class="g">${esc(x)}</li>`).join('')}</ul></div>` : ''}
     ${d.bad.length ? `<div class="db-list"><p class="db-t warn">À améliorer</p><ul>${d.bad.map(x => `<li class="b">${esc(x)}</li>`).join('')}</ul></div>` : ''}
     ${d.next.length ? `<div class="db-next"><b>La prochaine fois</b>${d.next.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''}
+    <p class="db-saved">${ic('check', 'ic-sm')} Enregistrée dans ton historique${ONLINE && !S.demo ? ' et sauvegardée en ligne' : ''}</p>
   </section>`;
+}
+const canAI = () => !!AI || (typeof ONLINE !== 'undefined' && ONLINE);
+const NOTE_PENDING = new Set();
+function coachNoteHTML(a) {
+  if (a.coachNote) return `<div class="db-note" id="cn-${a.id}"><b>L'analyse de ${esc(coachCfg().name)}</b><p>${esc(a.coachNote)}</p></div>`;
+  if (!canAI()) return '';
+  setTimeout(() => requestCoachNote(a), 0);
+  return `<div class="db-note pending" id="cn-${a.id}"><span class="typing"><i></i><i></i><i></i></span>${esc(coachCfg().name)} analyse ta course…</div>`;
+}
+function notePrompt(a) {
+  const c = coachCfg(), p = S.profile, s = a.sessionId && findSession(a.sessionId), d = debrief(a), zk = s ? zoneKey(s) : 'ef';
+  const sim = S.acts.filter(x => x.id !== a.id && x.date <= a.date && actType(x) === actType(a) && x.paceSec).sort((x, y) => x.date < y.date ? 1 : -1).slice(0, 3).map(x => `${x.date} : ${x.distKm ? fmtKm(x.distKm, 1) + ' km, ' : ''}${fmtPace(x.paceSec)}/km, effort ${x.rpe || '?'}/10`).join(' ; ');
+  const W = S.plan.weeks.find(x => a.date >= x.start && a.date <= x.end), wi = W ? weekInfo(W) : null;
+  const ns = allSessions().filter(x => x.date > a.date && !actFor(x.id) && !S.skips[x.id]).sort((x, y) => x.date < y.date ? -1 : 1)[0];
+  return `Tu es ${c.name}, coach de course à pied dans l'appli Pora. Style : ${COACH_TONES[c.tone][1]} Tu tutoies ${p.first}.
+Écris l'analyse de la course ci-dessous en 4 phrases maximum, en français, sans liste ni titre : ce qui a bien marché, ce qui doit s'améliorer, puis UN conseil concret et chiffré pour la prochaine séance. Appuie-toi uniquement sur ces données, n'invente rien. Si une gêne est signalée, rappelle de consulter un professionnel si elle persiste.
+Séance prévue : ${s ? `${s.title} (${TYPES[s.type].name}), cible ${rangeTxt(zk)}/km` : `sortie libre hors plan, zone d'endurance ${rangeTxt('ef')}/km`}.
+Réalisé le ${a.date} : ${a.distKm ? fmtKm(a.distKm, 2) + ' km' : 'distance non notée'}${a.durSec ? ', durée ' + fmtDur(a.durSec) : ''}${a.paceSec ? ', allure ' + fmtPace(a.paceSec) + '/km' + (a.paceKind === 'blocs' ? ' sur les blocs' : '') : ''}, effort ressenti ${a.rpe ? a.rpe + '/10' : 'non noté'}${a.pain ? `, gêne ${a.painZone ? ZONES[a.painZone].label.toLowerCase() : ''} ${a.pain}/10` : ''}.${a.splits && a.splits.length ? ' Temps au km : ' + a.splits.map(fmtPace).join(', ') + '.' : ''}${a.note ? ` Note de ${p.first} : « ${a.note} ».` : ''}
+Constats : positifs : ${d.good.join(' ') || 'aucun'} À améliorer : ${d.bad.join(' ') || 'rien'}
+Courses comparables précédentes : ${sim || 'aucune'}.
+${wi ? `Semaine ${W.n} sur ${S.plan.weeks.length} (${W.deload ? 'semaine allégée' : PHASES[W.phase].name}) : ${wi.done}/${wi.total} séances, ${fmtKm(wi.km)} km sur environ ${fmtKm(wi.plannedKm, 0)} prévus.` : ''}
+Prochaine séance : ${ns ? `${ns.title}, ${relDay(ns.date).toLowerCase()}, cible ${rangeTxt(zoneKey(ns))}/km` : 'aucune de prévue'}.`;
+}
+async function requestCoachNote(a) {
+  if (!canAI() || NOTE_PENDING.has(a.id) || a.coachNote) return;
+  NOTE_PENDING.add(a.id);
+  let text = null;
+  try {
+    const prompt = notePrompt(a);
+    if (AI) { const r = await AI(prompt, { modelTier: 'default' }); text = (r && r.text || '').trim(); }
+    else text = await remoteAnswer(prompt);
+  } catch (e) { text = null; }
+  NOTE_PENDING.delete(a.id);
+  const el = document.getElementById('cn-' + a.id);
+  const live = S.acts.find(x => x.id === a.id);
+  if (text && live) { live.coachNote = text; live.coachNoteAt = Date.now(); saveAct(live); if (el) el.outerHTML = coachNoteHTML(live); }
+  else if (el) el.remove();
 }
 
 /* =========================================================
@@ -2175,7 +2232,7 @@ function submitLog(form) {
   if (sid && S.skips[sid]) delete S.skips[sid];
   if (isNew) S.acts.push(a);
   S.coach = S.coach.filter(c => c.actId !== a.id);
-  const out = analyze(a); saveAct(a);
+  delete a.coachNote; const out = analyze(a); saveAct(a);
   if (wantPain && !a.painZone) openPain({ actId: a.id }); else openSheet(coachReply(out, a));
   render();
 }
@@ -2838,7 +2895,7 @@ document.addEventListener('submit', e => {
     a.rpe = +(f.querySelector('input[name=rpe]:checked')?.value || 0) || null; a.note = $('#rf-note').value.trim();
     const b = $('#rf-blocs') && parsePace($('#rf-blocs').value); if (b) { a.paceSec = b; a.paceKind = 'blocs'; }
     const wantPain = f.querySelector('input[name=pain]:checked')?.value === '1';
-    S.coach = S.coach.filter(c => c.actId !== a.id); const out = analyze(a); saveAct(a);
+    S.coach = S.coach.filter(c => c.actId !== a.id); delete a.coachNote; const out = analyze(a); saveAct(a);
     if (wantPain) openPain({ actId: a.id }); else openSheet(coachReply(out, a));
     render();
   }
@@ -2866,7 +2923,7 @@ function quickPace(sid, val) {
   a.paceSec = p; a.paceKind = isQ(s) ? 'blocs' : 'avg';
   if (S.skips[sid]) delete S.skips[sid];
   S.coach = S.coach.filter(c => c.actId !== a.id);
-  const out = analyze(a); saveAct(a);
+  delete a.coachNote; const out = analyze(a); saveAct(a);
   toast(out[0][1]);
   const pv = $('#pv-' + sid), pvv = paceVerdict(s, p); if (pv && pvv) { pv.className = 'pv ' + pvv[0]; pv.textContent = pvv[1]; }
   const el = $('#pi-' + sid); if (el) el.classList.add('has');
