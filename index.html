@@ -844,15 +844,15 @@ function qualityCode(w, N, p, idx, testsDone) {
   if (deload) return (ph === 1 && !reprise) || (reprise && !testsDone) ? 'test' : 'strides';
   const seq = Q_SEQ[reprise ? 'reprise' : 'normal'][ph];
   const c = seq[idx % seq.length];
-  return c === 'GOAL' ? (p.goal === '10k' ? 'allure3x10' : p.goal === 'distance' ? 'tempo2x12' : 'frac10x1') : c;
+  return c === 'GOAL' ? (p.goal === '10k' || p.goal === 'complet' ? 'allure3x10' : p.goal === 'distance' ? 'tempo2x12' : 'frac10x1') : c;
 }
 function buildPlan(p, start) {
   const R = p.refPace, L = p.longestKm, reprise = p.experience === 'lt1', N = p.weeks || 12;
   const ageF = { '45_59': 0.85, '60p': 0.7 }[p.age] || 1;
   const fragile = (p.injuries || []).length > 0;
   const lifeF = p.life === 'high' ? 0.9 : 1;
-  const capKm = { allure: 11, distance: 16, '10k': 13 }[p.goal] || 12;
-  const inc = (p.goal === 'distance' ? 1 : 0.75) * (reprise ? 0.7 : 1) * ageF * (fragile ? 0.85 : 1);
+  const capKm = { allure: 11, distance: 16, '10k': 13, complet: 14 }[p.goal] || 12;
+  const inc = (p.goal === 'distance' ? 1 : p.goal === 'complet' ? 0.875 : 0.75) * (reprise ? 0.7 : 1) * ageF * (fragile ? 0.85 : 1);
   const weekMin = p.sessionMin || 60, longMin = p.longMin || 90;
   const slTimeCap = Math.max(4, Math.floor(longMin * 60 / (R + 80) * 2) / 2);
   let sl0 = clamp(roundHalf(Math.min(L, 10) * 0.9), 4, 12);
@@ -1686,11 +1686,11 @@ function importData(file) {
 /* =========================================================
    Onboarding
    ========================================================= */
-function obInit() { OB = { step: 0, first: '', last: '', username: '', userTouched: false, experience: '3to6', longestKm: 6, easyPace: 420, know5k: false, t5k: '', goal: 'allure', days: 3, weekdays: [1, 3, 6], start: 'next', err: '', coach: defaultCoach(), weeklyKm: 15, age: '30_44', injuries: [], life: 'mid', sessionMin: 60, longMin: 90, weeks: 12, terrain: 'mixte' }; }
+function obInit() { OB = { step: 0, first: '', last: '', username: '', userTouched: false, experience: '3to6', longestKm: 6, easyPace: 420, know5k: false, t5k: '', goal: 'complet', days: 3, weekdays: [1, 3, 6], start: 'next', err: '', coach: defaultCoach(), weeklyKm: 15, age: '30_44', injuries: [], life: 'mid', sessionMin: 60, longMin: 90, weeks: 12, terrain: 'mixte' }; }
 const EXP = [['lt1', "Moins d'un mois", 'Reprise en douceur, la vitesse arrive plus tard'], ['1to3', '1 à 3 mois', ''], ['3to6', '3 à 6 mois', ''], ['gt6', 'Plus de 6 mois', '']];
-const GOALS = [['allure', 'Courir plus vite', 'Gagner en allure sur 5 et 10 km', '↑'], ['distance', 'Courir plus longtemps', 'Allonger tes sorties, viser 15 km', '→'], ['10k', 'Mon premier 10 km', 'Finir la 12e semaine par un 10 km', '10']];
+const GOALS = [['complet', 'Progresser sur tout', 'Plus vite et plus longtemps : un plan équilibré · conseillé', '★'], ['allure', 'Courir plus vite', 'Gagner en allure sur 5 et 10 km', '↑'], ['distance', 'Courir plus longtemps', 'Allonger tes sorties, viser 15 km', '→'], ['10k', 'Mon premier 10 km', 'Finir la 12e semaine par un 10 km', '10']];
 function obPreviewBars() {
-  const p = { refPace: 375, longestKm: 7, goal: 'allure', days: 3, experience: '3to6' };
+  const p = { refPace: 375, longestKm: 7, goal: 'complet', days: 3, experience: '3to6' };
   const prevS = S; S = blank(); S.profile = { ...p, weekdays: [1, 3, 6] };
   const plan = buildPlan(p, todayISO()); S.plan = plan; layout();
   const kms = plan.weeks.map(W => sum(W.sessions.map(s => estimate(s, 375).km)));
@@ -1843,6 +1843,7 @@ function tailoredHTML(p) {
   if (p.age === '45_59' || p.age === '60p') items.push('Progression plus douce et récupération renforcée, adaptées à ton âge.');
   if (inj.length) items.push(`Antécédents (${inj.join(', ')}) : distances augmentées plus lentement, et conseils de prévention.`);
   if (p.life === 'high') items.push('Quotidien chargé : volume réduit de 10 % pour que tu récupères.');
+  if (p.goal === 'complet') items.push(`Objectif complet : vitesse (fartlek, seuil, fractionné, allure 10 km) et endurance (sortie longue jusqu'à ${fmtKm(maxSL, 1)} km), à parts égales.`);
   if (p.terrain === 'piste') items.push('Fractionné et seuil sur piste : idéal pour tenir les allures.');
   else if (p.terrain === 'chemins') items.push('Chemins : tes tibias te remercieront. Pour les blocs, cherche une portion plate.');
   else if (p.terrain === 'tapis') items.push('Tapis : mets 1 % de pente pour retrouver les sensations de la route.');
@@ -2609,7 +2610,7 @@ function hydrateMaps() {
 function loadDemo() {
   S = blank(); S.demo = true;
   const t = todayISO(), start = addDays(addDays(t, -wd(t)), -14);
-  S.profile = { first: 'Camille', last: 'Martin', username: 'camille.court', experience: '3to6', longestKm: 7, goal: 'allure', days: 3, weekdays: [1, 3, 6], refPace: 375, refHistory: [{ date: start, R: 375, source: 'estimation' }], createdAt: start };
+  S.profile = { first: 'Camille', last: 'Martin', username: 'camille.court', experience: '3to6', longestKm: 7, goal: 'complet', days: 3, weekdays: [1, 3, 6], refPace: 375, refHistory: [{ date: start, R: 375, source: 'estimation' }], createdAt: start };
   S.coachP = { name: 'Nina', shape: 'galet', color: 'claire', eyes: 'vifs', acc: 'bandeau', tone: 'bienveillant' };
   S.plan = buildPlan(S.profile, start); layout();
   coachSay('info', 'Bienvenue, Camille.', "Ton plan est prêt. Première règle : les sorties d'endurance se courent lentement. Je te le rappellerai.");
