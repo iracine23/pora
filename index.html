@@ -206,9 +206,9 @@ table.ptab{border-collapse:separate;border-spacing:0;min-width:620px;width:100%;
 .pace-in.has{border-color:var(--good);color:var(--good)}
 
 /* progress */
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
 .kpi{background:var(--surface);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.kpi b{font-family:var(--f-num);font-weight:700;font-size:28px;white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1.05}
+.kpi b{font-family:var(--f-num);font-weight:700;font-size:clamp(18px,5.4vw,28px);white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1.05}
 .kpi span{font-size:12px;color:var(--ink-2);font-weight:600}
 .big5k{font-family:var(--f-num);font-weight:700;font-size:84px;line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .chart{width:100%;height:auto;display:block}
@@ -494,7 +494,7 @@ button.day:active{transform:scale(.96)}
 #toast button{font-weight:800;color:var(--bg);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
 .sheet-panel:focus{outline:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.date-chips{display:flex;gap:6px}
+.date-chips{display:flex;gap:6px;flex-wrap:wrap}
 .date-chips button{font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:999px;background:var(--surface-2)}
 /* chat */
 #chat{position:fixed;inset:0;z-index:58;background:var(--bg);display:flex;flex-direction:column}
@@ -589,12 +589,43 @@ button.day:active{transform:scale(.96)}
 .wl-bar.on{transform:none}
 .wl-bar .btn{max-width:520px;margin:0 auto;display:flex;min-height:52px}
 @media (min-width:760px){.wl-feats{grid-template-columns:repeat(3,1fr);max-width:960px}.wl-alt .wl-in{max-width:960px}}
+
+/* no overflow, anywhere */
+h1,h2,h3,.h1,.h2,.h3,p,li,b,small,span{overflow-wrap:break-word}
+.between>*,.row>*{min-width:0}
+.chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;flex:none}
+.grid2>*{min-width:0}
+.grid2 .btn,.btn-block{white-space:normal;text-align:center;line-height:1.2;padding-left:12px;padding-right:12px}
+.kpi,.summary-grid div,.lv-stats div{min-width:0;overflow:hidden}
+.summary-grid b{font-size:clamp(20px,6.5vw,28px)!important}
+.target .pace{font-size:clamp(44px,15vw,64px)!important}
+.wl-pace{font-size:clamp(38px,13vw,52px)!important}
+input[type=range]{margin:0}
+.wl-feats{grid-template-columns:minmax(0,1fr)}
+.wl-feat{min-width:0}
+.wl-trio .cav{width:min(84px,22vw);height:auto}
+.wl-body svg{width:min(96px,26vw)}
+/* debrief */
+.debrief{background:var(--surface);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.db-head{display:flex;align-items:center;gap:12px}
+.db-av{width:50px;height:50px;border-radius:15px;background:var(--accent-soft);display:grid;place-items:center;flex:none}
+.db-head .kl{display:block;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin-bottom:4px}
+.db-t{font-size:13px;font-weight:800;margin-bottom:6px}
+.db-t.good{color:var(--good)}.db-t.warn{color:var(--warn)}
+.db-list ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.db-list li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:9px;font-size:14.5px;line-height:1.4}
+.db-list li::before{content:"✓";width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good);margin-top:1px}
+.db-list li.b::before{content:"!";background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.db-next{border-top:1px solid var(--line);padding-top:10px;font-size:14px;display:grid;gap:4px}
+.db-next b{font-size:13px;color:var(--accent-2)}
+.codebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:var(--surface-2)}
+.codebox span{flex:1 1 160px;min-width:0;font-family:var(--f-num);font-size:22px;font-weight:700;letter-spacing:.05em}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
 .pop{animation:pop .35s cubic-bezier(.2,.9,.3,1.3)}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-@media (max-width:370px){.actions{grid-template-columns:1fr 1fr}.actions .btn-go{grid-column:1/-1}.target .pace{font-size:46px}.kpi b{font-size:22px}}
+@media (max-width:370px){.actions{grid-template-columns:1fr 1fr}.actions .btn-go{grid-column:1/-1}.target .pace{font-size:46px}}
 </style>
 
 <div id="app"></div>
@@ -747,33 +778,57 @@ function mkQ(code, efMin) {
     case 'frac8x1': return mkSession('frac', 'Fractionné 8 × 1 min', [WU, st('8 × 1 min', 'frac', 'Récupération 1 min 30 en trottinant.'), CD], { min: 45 });
     case 'frac6x2': return mkSession('frac', 'Fractionné 6 × 2 min', [WU, st('6 × 2 min', 'frac', 'Récupération 2 min en trottinant.'), CD], { min: 49 });
     case 'frac10x1': return mkSession('frac', 'Fractionné 10 × 1 min', [WU, st('10 × 1 min', 'frac', 'Récupération 1 min en trottinant.'), CD], { min: 45 });
+    case 'allure2x10': return mkSession('allure', '2 × 10 min allure 10 km', [WU, st('2 × 10 min', 'allure', 'Récupération 2 min. Mémorise la sensation de cette allure.'), CD], { min: 47 });
     case 'allure3x10': return mkSession('allure', '3 × 10 min allure 10 km', [WU, st('3 × 10 min', 'allure', 'Récupération 2 min. Mémorise la sensation de cette allure.'), CD], { min: 59 });
   }
 }
-function qualityCode(w, p) {
-  const reprise = p.experience === 'lt1';
-  const map = reprise
-    ? { 1:'strides', 2:'strides', 3:'fart6', 4:'test', 5:'fart8', 6:'tempo2x8', 7:'tempo2x10', 8:'strides', 9:'tempo20', 10:'frac8x1', 11:'frac6x2', 12:'test' }
-    : { 1:'test', 2:'fart8', 3:'fart10', 4:'strides', 5:'tempo2x8', 6:'tempo3x8', 7:'tempo20', 8:'test', 9:'frac8x1', 10:'frac6x2',
-        11: p.goal === '10k' ? 'allure3x10' : p.goal === 'distance' ? 'tempo2x12' : 'frac10x1', 12: p.goal === '10k' ? 'strides' : 'test' };
-  return map[w];
+const Q_SEQ = {
+  normal: [['fart8', 'fart10'], ['tempo2x8', 'tempo3x8', 'tempo20'], ['frac8x1', 'frac6x2', 'GOAL']],
+  reprise: [['strides', 'fart6', 'fart8'], ['fart8', 'tempo2x8', 'tempo2x10'], ['tempo20', 'frac8x1', 'frac6x2']],
+};
+const SHORTER = { tempo3x8: 'tempo2x8', tempo2x12: 'tempo2x10', allure3x10: 'allure2x10', frac6x2: 'frac8x1', fart10: 'fart8', tempo20: 'tempo2x8' };
+function phaseOf(w, N) { return w <= Math.round(N / 3) ? 0 : w <= Math.round(2 * N / 3) ? 1 : 2; }
+function qualityCode(w, N, p, idx, testsDone) {
+  const reprise = p.experience === 'lt1', ph = phaseOf(w, N), deload = w % 4 === 0;
+  if (w === N) return p.goal === '10k' ? 'strides' : 'test';
+  if (w === 1) return reprise ? 'strides' : 'test';
+  if (deload) return (ph === 1 && !reprise) || (reprise && !testsDone) ? 'test' : 'strides';
+  const seq = Q_SEQ[reprise ? 'reprise' : 'normal'][ph];
+  const c = seq[idx % seq.length];
+  return c === 'GOAL' ? (p.goal === '10k' ? 'allure3x10' : p.goal === 'distance' ? 'tempo2x12' : 'frac10x1') : c;
 }
 function buildPlan(p, start) {
-  const R = p.refPace, L = p.longestKm, reprise = p.experience === 'lt1';
+  const R = p.refPace, L = p.longestKm, reprise = p.experience === 'lt1', N = p.weeks || 12;
+  const ageF = { '45_59': 0.85, '60p': 0.7 }[p.age] || 1;
+  const fragile = (p.injuries || []).length > 0;
+  const lifeF = p.life === 'high' ? 0.9 : 1;
   const capKm = { allure: 11, distance: 16, '10k': 13 }[p.goal] || 12;
-  const inc = (p.goal === 'distance' ? 1 : 0.75) * (reprise ? 0.7 : 1);
-  const sl0 = clamp(roundHalf(Math.min(L, 10) * 0.9), 4, 12);
-  const ef0 = clamp(Math.round(Math.min(L, 8) * (R + 75) / 60 * 0.75 / 5) * 5, 30, 45);
-  const weeks = []; let k = 0;
-  for (let w = 1; w <= 12; w++) {
-    const deload = w % 4 === 0, phase = w <= 4 ? 0 : w <= 8 ? 1 : 2;
+  const inc = (p.goal === 'distance' ? 1 : 0.75) * (reprise ? 0.7 : 1) * ageF * (fragile ? 0.85 : 1);
+  const weekMin = p.sessionMin || 60, longMin = p.longMin || 90;
+  const slTimeCap = Math.max(4, Math.floor(longMin * 60 / (R + 80) * 2) / 2);
+  let sl0 = clamp(roundHalf(Math.min(L, 10) * 0.9), 4, 12);
+  let ef0 = clamp(Math.round(Math.min(L, 8) * (R + 75) / 60 * 0.75 / 5) * 5, 30, 45);
+  if (p.weeklyKm) {
+    const efKm = m => m * 60 / (R + 75);
+    const est = (p.days >= 3 ? efKm(ef0) : 0) + sl0 + 6 + (p.days >= 4 ? efKm(30) : 0);
+    const f = clamp(p.weeklyKm * 1.05 / est, 0.7, 1.3);
+    sl0 = clamp(roundHalf(sl0 * f), 4, 14); ef0 = clamp(Math.round(ef0 * f / 5) * 5, 25, 50);
+  }
+  sl0 = Math.min(sl0 * lifeF, slTimeCap); ef0 = Math.min(Math.round(ef0 * lifeF / 5) * 5, weekMin);
+  const weeks = []; let k = 0, idx = [0, 0, 0], tests = 0;
+  for (let w = 1; w <= N; w++) {
+    const deload = w % 4 === 0 || (w === N && N >= 8), phase = phaseOf(w, N);
     if (w > 1 && !deload) k++;
-    const slBase = Math.min(capKm, sl0 + k * inc);
+    const slBase = Math.min(capKm, slTimeCap, sl0 + k * inc * lifeF);
     const slKm = deload ? Math.max(4, roundHalf(slBase * 0.72)) : roundHalf(slBase);
-    const efMin = deload ? Math.max(25, ef0 - 5) : Math.min(55, ef0 + 5 * Math.floor(k / 2));
-    const q = mkQ(qualityCode(w, p), efMin);
-    const long = (w === 12 && p.goal === '10k') ? mkRace10() : mkSL(slKm);
-    const sessions = p.days === 2 ? [q, long] : p.days === 3 ? [mkEF(efMin, false), q, long] : [mkEF(efMin, false), q, mkRecup(deload ? 25 : 30), long];
+    const efMin = Math.min(weekMin, deload ? Math.max(25, ef0 - 5) : Math.min(55, ef0 + 5 * Math.floor(k / 2)));
+    let code = qualityCode(w, N, p, idx[phase], tests);
+    if (!deload && w > 1 && w < N) idx[phase]++;
+    if (code === 'test') tests++;
+    let q = mkQ(code, efMin);
+    while (q.min && q.min > weekMin && SHORTER[code]) { code = SHORTER[code]; q = mkQ(code, efMin); }
+    const long = (w === N && p.goal === '10k') ? mkRace10() : mkSL(slKm);
+    const sessions = p.days === 2 ? [q, long] : p.days === 3 ? [mkEF(efMin, false), q, long] : [mkEF(efMin, false), q, mkRecup(Math.min(weekMin, deload ? 25 : 30)), long];
     weeks.push({ id: uid(), phase, deload, sessions });
   }
   return { start, weeks, createdAt: Date.now() };
@@ -866,7 +921,7 @@ const Store = {
   },
 };
 function persist() {
-  S.updatedAt = Date.now(); Store.saveLocal();
+  S.updatedAt = Date.now(); Store.saveLocal(); cloudSchedule();
   clearTimeout(Store.coreTimer);
   Store.coreTimer = setTimeout(() => Store.write('core', () => Store.core()), 500);
 }
@@ -1367,20 +1422,20 @@ function localAnswer(raw) {
   return { text: best.a(q), act: best.act };
 }
 const PAIN_WORDS = ['douleur', 'mal ', 'mal au', 'gene', 'blesse', 'genou', 'tibia', 'cheville', 'mollet', 'achille', 'tendin', 'periostite'];
-async function aiAnswer(q) {
+function coachPrompt(q) {
   const c = coachCfg(), p = S.profile, { i, W } = ctxWeek(), s = focusSession();
   const recent = S.acts.slice().sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 5).map(a => `${a.date} ${a.stitle || 'sortie libre'} ${a.distKm ? fmtKm(a.distKm, 1) + ' km' : ''} ${a.paceSec ? fmtPace(a.paceSec) + '/km' : ''} effort ${a.rpe || '?'}/10`).join(' ; ');
   const pains = S.pains.slice(-3).map(x => `${x.date} ${ZONES[x.zone].label} ${x.side || ''} ${x.intensity}/10${x.resolved ? ' (passée)' : ''}`).join(' ; ');
   const hist = S.chat.slice(-9, -1).map(m => `${m.me ? p.first : c.name} : ${m.text}`).join('\n');
   const prompt = `Tu es ${c.name}, le coach de course à pied de l'appli Pora. Ton style : ${COACH_TONES[c.tone][1]} Tu tutoies ${p.first}. Réponds en français à TOUTE question, même éloignée de la course, de façon utile et concrète, en 120 mots maximum, sans liste à puces ni titres. Pour la course, appuie-toi sur le contexte ci-dessous. Tu n'es pas médecin : en cas de douleur forte, qui dure, au repos ou avec gonflement, ou pour une question médicale, dis de consulter un professionnel de santé.
-Contexte : objectif « ${GOALS.find(g => g[0] === p.goal)[1]} », ${p.days} séances par semaine. Semaine ${i + 1} sur ${S.plan.weeks.length} (${W.deload ? 'semaine allégée' : PHASES[W.phase].name}). Allures : endurance ${rangeTxt('ef')}/km, seuil ${rangeTxt('tempo')}/km, fractionné ${rangeTxt('frac')}/km ; 5 km estimé ${fmtDur(p.refPace * 5)}. Prochaine séance : ${s ? s.title + ', ' + relDay(s.date).toLowerCase() : 'aucune'}. Dernières courses : ${recent || 'aucune'}. Gênes : ${pains || 'aucune'}.
+Contexte : objectif « ${GOALS.find(g => g[0] === p.goal)[1]} », ${p.days} séances par semaine, ${p.weeklyKm != null ? p.weeklyKm + ' km par semaine au départ' : ''}, séances de ${p.sessionMin || 60} min en semaine, sortie longue jusqu'à ${p.longMin || 90} min, blessures passées : ${(p.injuries || []).map(z => ZONES[z].label).join(', ') || 'aucune'}, quotidien ${({ low: 'calme', mid: 'normal', high: 'très chargé' })[p.life] || 'normal'}. Semaine ${i + 1} sur ${S.plan.weeks.length} (${W.deload ? 'semaine allégée' : PHASES[W.phase].name}). Allures : endurance ${rangeTxt('ef')}/km, seuil ${rangeTxt('tempo')}/km, fractionné ${rangeTxt('frac')}/km ; 5 km estimé ${fmtDur(p.refPace * 5)}. Prochaine séance : ${s ? s.title + ', ' + relDay(s.date).toLowerCase() : 'aucune'}. Dernières courses : ${recent || 'aucune'}. Gênes : ${pains || 'aucune'}.
 ${hist ? 'Conversation jusqu\'ici :\n' + hist + '\n' : ''}Nouvelle question de ${p.first} : ${q}`;
-  const r = await AI(prompt, { modelTier: 'default' });
-  return (r && r.text || '').trim();
+  return prompt;
 }
+async function aiAnswer(q) { const r = await AI(coachPrompt(q), { modelTier: 'default' }); return (r && r.text || '').trim(); }
 function openChat(prefill) {
   if (!S.chat) S.chat = [];
-  if (!S.chat.length) S.chat.push({ me: false, text: `Salut ${S.profile.first}, c'est ${coachCfg().name}. Pose-moi toutes tes questions : ta séance, tes allures, une douleur, la nutrition, la motivation… ${AI ? 'Je réponds à tout.' : ''}`, t: Date.now() });
+  if (!S.chat.length) S.chat.push({ me: false, text: `Salut ${S.profile.first}, c'est ${coachCfg().name}. Pose-moi toutes tes questions : ta séance, tes allures, une douleur, la nutrition, la motivation… ${AI || ONLINE ? 'Je réponds à tout.' : ''}`, t: Date.now() });
   const el = $('#chat'); el.hidden = false; document.body.classList.add('noscroll');
   renderChat();
   setTimeout(() => { const i = $('#ch-in'); if (i && !('ontouchstart' in window)) i.focus(); }, 50);
@@ -1391,7 +1446,7 @@ let CHAT_BUSY = false;
 function renderChat() {
   const c = coachCfg(), el = $('#chat');
   const draft = $('#ch-in') ? $('#ch-in').value : '';
-  el.innerHTML = `<header class="ch-head"><span class="ch-av">${coachSVG(c, CHAT_BUSY ? 'neutral' : 'happy', 44)}</span><div class="t"><b>${esc(c.name)}</b><small>${CHAT_BUSY ? 'écrit…' : AI ? 'Ton coach · répond à tout avec Claude' : 'Ton coach · réponses hors ligne'}</small></div>${S.chat.length > 1 ? `<button class="ch-clear" data-act="chatClear">Effacer</button>` : ''}<button class="ch-x" data-act="closeChat" aria-label="Fermer la conversation">${ic('x')}</button></header>
+  el.innerHTML = `<header class="ch-head"><span class="ch-av">${coachSVG(c, CHAT_BUSY ? 'neutral' : 'happy', 44)}</span><div class="t"><b>${esc(c.name)}</b><small>${CHAT_BUSY ? 'écrit…' : AI ? 'Ton coach · répond à tout avec Claude' : ONLINE ? 'Ton coach · répond à toutes tes questions' : 'Ton coach · réponses hors ligne'}</small></div>${S.chat.length > 1 ? `<button class="ch-clear" data-act="chatClear">Effacer</button>` : ''}<button class="ch-x" data-act="closeChat" aria-label="Fermer la conversation">${ic('x')}</button></header>
   <div class="ch-body" id="ch-body" role="log" aria-live="polite">${S.chat.map(m => m.me ? `<div class="msg me">${esc(m.text)}</div>` : `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot">${esc(m.text)}${m.act ? `<button class="btn btn-primary" style="margin-top:10px;min-height:38px;font-size:13.5px" data-act="${m.act[0]}">${m.act[1]}</button>` : ''}</div></div>`).join('')}${CHAT_BUSY ? `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot typing" aria-label="${esc(c.name)} écrit"><i></i><i></i><i></i></div></div>` : ''}</div>
   <footer class="ch-foot"><div class="ch-sugg">${CHAT_SUGG.map(s => `<button data-act="chatSugg" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
   <form id="chatForm" class="ch-form" novalidate><label for="ch-in" class="sr">Ta question</label><textarea id="ch-in" rows="1" placeholder="Écris ta question…" enterkeyhint="send">${esc(draft)}</textarea><button class="ch-send" type="submit" aria-label="Envoyer" ${CHAT_BUSY ? 'disabled' : ''}>${ic('send')}</button></form></footer>`;
@@ -1404,6 +1459,7 @@ async function chatSend(q) {
   CHAT_BUSY = true; renderChat();
   let ans = null;
   if (AI) { try { const t = await aiAnswer(q); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; } catch (e) { ans = null; } }
+  if (!ans && ONLINE) { const t = await remoteAnswer(coachPrompt(q)); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; }
   if (!ans) { await new Promise(r => setTimeout(r, 450 + Math.random() * 350)); ans = localAnswer(q); }
   CHAT_BUSY = false;
   S.chat.push({ me: false, text: ans.text, act: ans.act || null, t: Date.now() }); S.chat = S.chat.slice(-40);
@@ -1411,9 +1467,177 @@ async function chatSend(q) {
 }
 
 /* =========================================================
+   Run debrief: what went well, what didn't, what to do next
+   ========================================================= */
+function debrief(a) {
+  const s = a.sessionId && findSession(a.sessionId), good = [], bad = [], next = [];
+  const type = s ? s.type : 'libre', easy = s ? (EASY.includes(type) || ['light', 'mini'].includes(S.adapt[s.id])) : true;
+  const zk = s ? zoneKey(s) : 'ef', [lo, hi] = zr(zk);
+  // 1. Did the planned work happen?
+  if (s && s.dist && a.distKm && !['light', 'mini'].includes(S.adapt[s.id])) {
+    const r = a.distKm / s.dist;
+    if (r >= 0.95) good.push(`Distance tenue : ${fmtKm(a.distKm, 1)} km sur ${fmtKm(s.dist, 1)} prévus.`);
+    else if (r < 0.8) { bad.push(`Distance écourtée : ${fmtKm(a.distKm, 1)} km sur ${fmtKm(s.dist, 1)} prévus.`); next.push("Garde de la marge : ralentis plutôt que de couper la sortie."); }
+  } else if (s && a.durSec) {
+    const plan = estimate(s).min * 60, r = a.durSec / plan;
+    if (r >= 0.9) good.push(`Durée respectée : ${fmtDur(a.durSec)} pour environ ${Math.round(plan / 60)} min prévues.`);
+    else if (r < 0.75) { bad.push(`Séance plus courte que prévu : ${fmtDur(a.durSec)} sur environ ${Math.round(plan / 60)} min.`); next.push("Prévois le temps complet : l'échauffement et le retour au calme font partie de la séance."); }
+  }
+  // 2. Pace vs target
+  const p = a.paceSec;
+  if (p && easy && a.paceKind !== 'blocs') {
+    if (p < lo - 5) { bad.push(`Trop rapide pour une sortie facile : ${fmtPace(p)}/km, cible ${fmtPace(lo)}–${fmtPace(hi)}.`); next.push(`Prochaine sortie facile : vise ${fmtPace((lo + hi) / 2)}/km, même si ça te paraît lent.`); }
+    else if (p <= hi + 15) good.push(`Allure juste : ${fmtPace(p)}/km, dans ta zone ${fmtPace(lo)}–${fmtPace(hi)}.`);
+    else bad.push(`Plus lent que la cible : ${fmtPace(p)}/km. Aucun souci si tu étais à l'aise.`);
+  }
+  if (s && isQ(s)) {
+    if (a.paceKind === 'blocs' && p) {
+      if (p < lo - 8) { bad.push(`Blocs trop rapides : ${fmtPace(p)}/km au lieu de ${fmtPace(lo)}–${fmtPace(hi)}.`); next.push("Sur les blocs, tiens l'allure prévue, pas plus vite : c'est la régularité qui paie."); }
+      else if (p > hi + 10) { bad.push(`Blocs un peu lents : ${fmtPace(p)}/km pour une cible de ${fmtPace(lo)}–${fmtPace(hi)}.`); next.push("Échauffe-toi bien 15 minutes avant les blocs, c'est ce qui les rend faciles."); }
+      else good.push(`Blocs dans la cible : ${fmtPace(p)}/km.`);
+    } else next.push("Ajoute l'allure moyenne de tes blocs : je pourrai juger précisément la qualité de la séance.");
+  }
+  if (s && type === 'test' && a.durSec && a.distKm >= 4.5) good.push(`Test bouclé : ${fmtKm(a.distKm, 2)} km en ${fmtDur(a.durSec)}. Tes allures peuvent être recalculées.`);
+  // 3. Regularity from km splits
+  const sp = (a.splits || []).filter(x => x > 0);
+  if (sp.length >= 3) {
+    const max = Math.max(...sp), min = Math.min(...sp), mean = sum(sp) / sp.length, half = Math.floor(sp.length / 2);
+    const first = sum(sp.slice(0, half)) / half, second = sum(sp.slice(-half)) / half;
+    if (max - min <= mean * 0.04) good.push(`Très régulier : tes km varient de ${fmtGap(max - min)} au plus.`);
+    else if (max - min > mean * 0.08) bad.push(`Allure irrégulière : ${fmtGap(max - min)} d'écart entre ton km le plus rapide et le plus lent.`);
+    if (second < first - 3) good.push('Fin plus rapide que le début : départ bien géré.');
+    else if (second > first * 1.04) { bad.push("Fin de course en baisse : tu es sans doute parti trop vite."); next.push('Pars plus doucement les deux premiers kilomètres.'); }
+  }
+  // 4. Effort and body
+  if (a.rpe) {
+    if (easy && a.rpe >= 7) { bad.push(`Effort ressenti élevé (${a.rpe}/10) pour une séance facile.`); next.push('Dors bien et garde la prochaine séance vraiment facile.'); }
+    else if (easy && a.rpe <= 5) good.push(`Effort maîtrisé : ${a.rpe}/10, c'est ce qu'on veut en endurance.`);
+    else if (!easy && a.rpe >= 6 && a.rpe <= 8) good.push(`Effort bien dosé : ${a.rpe}/10.`);
+    else if (!easy && a.rpe >= 9 && type !== 'test') bad.push(`Effort maximal (${a.rpe}/10) : une séance de qualité doit rester contrôlée.`);
+    else if (!easy && a.rpe <= 4) next.push('Tu avais de la réserve : la prochaine séance de qualité, ose un peu plus.');
+  } else next.push("Note ton effort ressenti : il m'aide à doser la suite.");
+  if (a.pain >= 1) { const z = a.painZone && ZONES[a.painZone]; bad.push(`Gêne signalée${z ? ' : ' + z.label.toLowerCase() : ''}${a.pain > 1 ? ` (${a.pain}/10)` : ''}.`); next.push('Surveille-la : si elle revient ou change ta foulée, signale-la.'); }
+  if (!s) { const W = S.plan && S.plan.weeks.find(x => a.date >= x.start && a.date <= x.end); if (W && W.deload) bad.push("Sortie en plus pendant une semaine allégée."); }
+  const pain = a.pain >= 4;
+  const verdict = pain || bad.length >= 3 ? 'revoir' : bad.length === 0 && good.length ? 'top' : 'ok';
+  const ns = allSessions().filter(x => x.date > a.date && !actFor(x.id) && !S.skips[x.id]).sort((x, y) => x.date < y.date ? -1 : 1)[0];
+  if (!next.length && ns) next.push(`Prochaine séance : ${ns.title}, ${relDay(ns.date).toLowerCase()}.`);
+  if (!good.length && !bad.length) good.push('Séance enregistrée : chaque sortie compte pour ta régularité.');
+  return { verdict, good, bad, next: next.slice(0, 2) };
+}
+const VERDICT = { top: ['Séance réussie', 'good', 'happy'], ok: ['Bonne séance, à affiner', 'warn', 'neutral'], revoir: ['Séance à revoir', 'bad', 'worried'] };
+function debriefHTML(a) {
+  const d = debrief(a), [lbl, cls, mood] = VERDICT[d.verdict], c = coachCfg();
+  return `<section class="debrief">
+    <div class="db-head"><span class="db-av">${coachSVG(c, mood, 44)}</span><div><span class="kl">Le bilan de ${esc(c.name)}</span><span class="pill ${cls}">${lbl}</span></div></div>
+    ${d.good.length ? `<div class="db-list"><p class="db-t good">Ce qui a bien marché</p><ul>${d.good.map(x => `<li class="g">${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${d.bad.length ? `<div class="db-list"><p class="db-t warn">À améliorer</p><ul>${d.bad.map(x => `<li class="b">${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${d.next.length ? `<div class="db-next"><b>La prochaine fois</b>${d.next.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''}
+  </section>`;
+}
+
+/* =========================================================
+   Online: AI coach and permanent backup on the hosted site
+   ========================================================= */
+const ONLINE = location.protocol === 'https:' && !(window.claude && typeof window.claude.use === 'function');
+async function remoteAnswer(prompt) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch('/api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }), signal: ctl.signal });
+    if (!r.ok) return null;
+    const j = await r.json(); return (j && j.text || '').trim() || null;
+  } catch (e) { return null; } finally { clearTimeout(t); }
+}
+const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function newSyncCode() {
+  const b = new Uint8Array(16); crypto.getRandomValues(b);
+  const ch = [...b].map(x => CODE_ABC[x % CODE_ABC.length]).join('');
+  return `${ch.slice(0, 4)}-${ch.slice(4, 8)}-${ch.slice(8, 12)}-${ch.slice(12, 16)}`;
+}
+const Cloud = { status: 'off', at: 0, timer: null, busy: false, again: false };
+function cloudSchedule() {
+  if (!ONLINE || !S.profile || S.demo) return;
+  if (!S.syncKey) { S.syncKey = newSyncCode(); Store.saveLocal(); }
+  clearTimeout(Cloud.timer); Cloud.timer = setTimeout(cloudSave, 2500);
+}
+async function cloudSave() {
+  if (!ONLINE || !S.profile || S.demo || !S.syncKey) return;
+  if (Cloud.busy) { Cloud.again = true; return; }
+  Cloud.busy = true;
+  try {
+    const r = await fetch('/api/sync', { method: 'PUT', headers: { 'content-type': 'application/json', 'x-pora-key': S.syncKey }, body: JSON.stringify(S) });
+    Cloud.status = r.ok ? 'ok' : 'error'; if (r.ok) Cloud.at = Date.now();
+  } catch (e) { Cloud.status = 'error'; }
+  Cloud.busy = false;
+  if (Cloud.again) { Cloud.again = false; cloudSave(); }
+  const el = $('#cloud-state'); if (el) el.outerHTML = cloudStateHTML();
+}
+async function cloudFetch(code) {
+  const r = await fetch('/api/sync', { headers: { 'x-pora-key': code } });
+  if (r.status === 404) return { missing: true };
+  if (!r.ok) throw new Error('http ' + r.status);
+  return { data: await r.json() };
+}
+async function cloudBoot() {
+  if (!ONLINE) return;
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+  if (!S.profile || !S.syncKey || S.demo) { if (S.profile && !S.demo) cloudSchedule(); return; }
+  try {
+    const res = await cloudFetch(S.syncKey);
+    if (res.data && (res.data.updatedAt || 0) > (S.updatedAt || 0)) { S = Object.assign(blank(), res.data); layout(); Store.saveLocal(); render(); toast('Données mises à jour depuis ta sauvegarde'); }
+    else if (res.missing || (res.data && (res.data.updatedAt || 0) < (S.updatedAt || 0))) cloudSave();
+    Cloud.status = 'ok'; Cloud.at = Date.now();
+  } catch (e) { Cloud.status = 'error'; }
+}
+function cloudStateHTML() {
+  if (!ONLINE) return `<p class="muted" id="cloud-state" style="font-size:13px">Sauvegarde en ligne disponible sur pora-coach.pages.dev.</p>`;
+  if (S.demo) return `<p class="muted" id="cloud-state" style="font-size:13px">Le profil d'exemple n'est pas sauvegardé.</p>`;
+  const t = Cloud.status === 'ok' ? `Sauvegardé en ligne${Cloud.at ? ' à ' + new Date(Cloud.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''}` : Cloud.status === 'error' ? 'Pas de connexion : sauvegardé sur ce téléphone, envoi en ligne dès que possible' : 'Sauvegarde en ligne en cours…';
+  return `<p class="row" id="cloud-state" style="font-size:13px;font-weight:600;color:${Cloud.status === 'error' ? 'var(--warn)' : 'var(--good)'}">${ic(Cloud.status === 'error' ? 'x' : 'check', 'ic-sm')} ${t}</p>`;
+}
+function backupCard() {
+  const code = S.syncKey;
+  return `<section class="card stack"><div><h2 class="h3">Sauvegarde</h2><p class="muted" style="font-size:13.5px">Tes séances, ton plan et ton coach sont gardés en ligne. Avec ce code, tu retrouves tout sur un autre téléphone.</p></div>
+    ${cloudStateHTML()}
+    ${ONLINE && code && !S.demo ? `<div class="codebox"><span class="num" id="sync-code">${UI.showCode ? esc(code) : '••••-••••-••••-••••'}</span><button class="btn btn-ghost" style="min-height:38px" data-act="toggleCode">${UI.showCode ? 'Masquer' : 'Afficher'}</button><button class="btn btn-ghost" style="min-height:38px" data-act="copyCode">Copier</button></div><p class="muted" style="font-size:12.5px">Garde ce code pour toi : il donne accès à tes données.</p>` : ''}
+    <div class="grid2"><button class="btn btn-ghost" data-act="exportData">Exporter</button><label class="btn btn-ghost" for="import-file">Importer</label></div>
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
+    ${ONLINE ? `<button class="link" style="align-self:flex-start" data-act="openRestore">Récupérer avec un code</button>` : ''}
+  </section>`;
+}
+function restoreSheet(err) {
+  return `<h2 class="h1" style="padding-right:44px">Récupérer mes données</h2><p class="muted">Entre le code de sauvegarde affiché dans le Profil de ton ancien téléphone (format ABCD-EFGH-JKLM-NPQR).</p>
+  <form id="restoreForm" class="stack" novalidate><div class="field"><label for="rs-code">Code de sauvegarde</label><input class="input num" id="rs-code" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD-EFGH-JKLM-NPQR"></div>${err ? `<p class="err">${esc(err)}</p>` : ''}<button class="btn btn-primary btn-block" type="submit">Récupérer</button></form>`;
+}
+async function restoreWith(raw) {
+  const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/(.{4})(?=.)/g, '$1-');
+  if (!/^[A-Z0-9]{4}(-[A-Z0-9]{4}){3}$/.test(code)) return openSheet(restoreSheet('Le code doit avoir 16 caractères, par exemple ABCD-EFGH-JKLM-NPQR.'));
+  try {
+    const res = await cloudFetch(code);
+    if (res.missing) return openSheet(restoreSheet('Aucune sauvegarde trouvée avec ce code. Vérifie chaque caractère.'));
+    S = Object.assign(blank(), res.data, { syncKey: code }); OB = null; layout(); Store.saveLocal(); Cloud.status = 'ok'; Cloud.at = Date.now();
+    closeSheet(); UI.tab = 'today'; render(); toast(`Bon retour, ${S.profile.first} !`);
+  } catch (e) { openSheet(restoreSheet("Impossible de joindre la sauvegarde. Vérifie ta connexion et réessaie.")); }
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `pora-${slug(S.profile.first)}-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast('Fichier de sauvegarde téléchargé');
+}
+function importData(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    try { const o = JSON.parse(r.result); if (!o || !o.profile || !o.plan) throw 0; const key = S.syncKey; S = Object.assign(blank(), o); if (!S.syncKey) S.syncKey = key; layout(); persist(); UI.tab = 'today'; render(); toast('Données importées'); }
+    catch (e) { toast("Ce fichier n'est pas une sauvegarde Pora"); }
+  };
+  r.readAsText(file);
+}
+
+/* =========================================================
    Onboarding
    ========================================================= */
-function obInit() { OB = { step: 0, first: '', last: '', username: '', userTouched: false, experience: '3to6', longestKm: 6, easyPace: 420, know5k: false, t5k: '', goal: 'allure', days: 3, weekdays: [1, 3, 6], start: 'next', err: '', coach: defaultCoach() }; }
+function obInit() { OB = { step: 0, first: '', last: '', username: '', userTouched: false, experience: '3to6', longestKm: 6, easyPace: 420, know5k: false, t5k: '', goal: 'allure', days: 3, weekdays: [1, 3, 6], start: 'next', err: '', coach: defaultCoach(), weeklyKm: 15, age: '30_44', injuries: [], life: 'mid', sessionMin: 60, longMin: 90, weeks: 12, terrain: 'mixte' }; }
 const EXP = [['lt1', "Moins d'un mois", 'Reprise en douceur, la vitesse arrive plus tard'], ['1to3', '1 à 3 mois', ''], ['3to6', '3 à 6 mois', ''], ['gt6', 'Plus de 6 mois', '']];
 const GOALS = [['allure', 'Courir plus vite', 'Gagner en allure sur 5 et 10 km', '↑'], ['distance', 'Courir plus longtemps', 'Allonger tes sorties, viser 15 km', '→'], ['10k', 'Mon premier 10 km', 'Finir la 12e semaine par un 10 km', '10']];
 function obPreviewBars() {
@@ -1437,7 +1661,7 @@ function welcomeHTML() {
   <section class="wl-hero">
     <svg class="wl-track" viewBox="0 0 256 256" aria-hidden="true"><path d="${lap}" fill="none" stroke="#CFE8DC" stroke-opacity=".13" stroke-width="30" stroke-linecap="round"/><circle r="15" fill="#FF6A45"><animateMotion dur="9s" repeatCount="indefinite" path="${lap}"/></circle></svg>
     <div class="wl-in">
-      <div class="wl-top"><span class="logo" role="img" aria-label="Pora">${BRAND.wordmark}</span><button class="wl-link" data-act="loadDemo">Voir un exemple</button></div>
+      <div class="wl-top"><span class="logo" role="img" aria-label="Pora">${BRAND.wordmark}</span>${ONLINE ? `<button class="wl-link" data-act="openRestore">J'ai déjà un compte</button>` : `<button class="wl-link" data-act="loadDemo">Voir un exemple</button>`}</div>
       <h1 class="wl-h">Reprends la course.<br>Progresse vraiment<span class="dot">.</span></h1>
       <p class="wl-sub">Un plan de 12 semaines calé sur ton niveau, un coach qui t'explique chaque séance, et le GPS pour suivre tes sorties.</p>
       <div class="wl-cta"><button class="wl-btn" data-act="obNext">Créer mon plan</button><span class="wl-note">2 minutes, sans compte</span></div>
@@ -1476,9 +1700,13 @@ function welcomeHTML() {
   </section>
   <div class="wl-bar" id="wl-bar"><button class="btn btn-primary btn-block" data-act="obNext">Créer mon plan</button></div>`;
 }
+const OB_AGES = [['u30', 'Moins de 30 ans'], ['30_44', '30 à 44 ans'], ['45_59', '45 à 59 ans'], ['60p', '60 ans et plus']];
+const OB_INJ = ['genou', 'genou_ext', 'tibia', 'cheville', 'mollet', 'achille', 'voute', 'ischio', 'hanche', 'dos'];
+const OB_LIFE = [['low', 'Plutôt calme', 'Je dors bien, peu de stress', '○'], ['mid', 'Normal', 'Une vie active classique', '◐'], ['high', 'Très chargé', 'Fatigue, stress ou peu de sommeil : volume réduit de 10 %', '●']];
+const OB_TERRAIN = [['route', 'Route'], ['chemins', 'Chemins'], ['piste', 'Piste'], ['tapis', 'Tapis'], ['mixte', 'Un peu de tout']];
 function renderOB() {
-  const o = OB, steps = 5;
-  const dots = `<div class="ob-dots" aria-label="Étape ${o.step} sur ${steps}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= o.step ? 'on' : ''}"></i>`).join('')}</div>`;
+  const o = OB, steps = 6;
+  const dots = `<div class="ob-dots" aria-label="Étape ${o.step} sur ${steps}">${[1, 2, 3, 4, 5, 6].map(i => `<i class="${i <= o.step ? 'on' : ''}"></i>`).join('')}</div>`;
   const top = o.step ? `<div class="ob-top"><button class="back" data-act="obBack" aria-label="Retour">${ic('chev')}</button>${dots}<span style="width:40px"></span></div>` : '';
   const err = o.err ? `<p class="err">${esc(o.err)}</p>` : '';
   if (o.step === 0) return welcomeHTML();
@@ -1503,6 +1731,7 @@ function renderOB() {
       <div class="stack" style="gap:6px"><p class="eyebrow">Ton niveau</p><h1 class="h1">Où en es-tu aujourd'hui ?</h1></div>
       <div class="field"><span class="flabel">Tu cours régulièrement depuis</span><div class="chips">${EXP.map(e => `<button class="chipbtn ${o.experience === e[0] ? 'on' : ''}" data-act="obSet" data-k="experience" data-v="${e[0]}">${e[1]}</button>`).join('')}</div>${o.experience === 'lt1' ? `<small class="muted">Mode reprise : deux semaines d'endurance pure avant toute vitesse.</small>` : ''}</div>
       <div class="field card"><label for="ob-long">Plus longue distance courue sans t'arrêter</label><div class="rangeval num"><span id="ob-long-v">${fmtKm(o.longestKm)}</span><small>km</small></div><input type="range" id="ob-long" data-ob="longestKm" min="2" max="21" step="0.5" value="${o.longestKm}"></div>
+      <div class="field card"><label for="ob-wk">Tes kilomètres par semaine en ce moment</label><div class="rangeval num"><span id="ob-wk-v">${o.weeklyKm}</span><small>km / semaine</small></div><input type="range" id="ob-wk" data-ob="weeklyKm" min="0" max="60" step="1" value="${o.weeklyKm}"><small class="muted">La première semaine part de là : pas de saut brutal de volume.</small></div>
       <div class="field card">${o.know5k
         ? `<label for="ob-5k">Ton temps sur 5 km (récent)</label><input class="input num" id="ob-5k" data-ob="t5k" inputmode="decimal" placeholder="31:30" value="${esc(o.t5k)}">`
         : `<label for="ob-easy">Ton allure habituelle sur une sortie tranquille</label><div class="rangeval num"><span id="ob-easy-v">${fmtPace(o.easyPace)}</span><small>/km</small></div><input type="range" id="ob-easy" data-ob="easyPace" min="300" max="540" step="5" value="${o.easyPace}">`}
@@ -1513,21 +1742,35 @@ function renderOB() {
     <div class="ob-foot"><button class="btn btn-primary btn-block" data-act="obNext">Continuer</button></div>`;
   if (o.step === 4) return `${top}
     <div class="ob-body">
+      <div class="stack" style="gap:6px"><p class="eyebrow">Ta santé et ton quotidien</p><h1 class="h1">Pour doser juste.</h1><p class="muted">Ces réponses changent la vitesse de progression et la récupération de ton plan.</p></div>
+      <div class="field"><span class="flabel">Ton âge</span><div class="chips">${OB_AGES.map(a => `<button class="chipbtn ${o.age === a[0] ? 'on' : ''}" data-act="obSet" data-k="age" data-v="${a[0]}">${a[1]}</button>`).join('')}</div></div>
+      <div class="field"><span class="flabel">Une blessure ces 12 derniers mois ? (plusieurs choix possibles)</span><div class="chips"><button class="chipbtn ${!o.injuries.length ? 'on' : ''}" data-act="obInj" data-v="">Aucune</button>${OB_INJ.map(z => `<button class="chipbtn ${o.injuries.includes(z) ? 'on' : ''}" data-act="obInj" data-v="${z}" aria-pressed="${o.injuries.includes(z)}">${ZONES[z].label}</button>`).join('')}</div>${o.injuries.length ? `<small class="muted">Ton plan progressera 15 % plus doucement, avec des conseils de prévention pour ${o.injuries.length > 1 ? 'ces zones' : 'cette zone'}.</small>` : ''}</div>
+      <div class="field"><span class="flabel">Ton quotidien en ce moment</span><div class="opts">${OB_LIFE.map(l => `<button class="opt ${o.life === l[0] ? 'on' : ''}" data-act="obSet" data-k="life" data-v="${l[0]}"><span class="mk">${l[3]}</span><span><b>${l[1]}</b><small>${l[2]}</small></span></button>`).join('')}</div></div>
+      ${err}
+    </div>
+    <div class="ob-foot"><button class="btn btn-primary btn-block" data-act="obNext">Continuer</button></div>`;
+  if (o.step === 5) return `${top}
+    <div class="ob-body">
       <div class="stack" style="gap:6px"><p class="eyebrow">Ton objectif</p><h1 class="h1">Qu'est-ce qu'on vise ?</h1></div>
       <div class="opts">${GOALS.map(g => `<button class="opt ${o.goal === g[0] ? 'on' : ''}" data-act="obSet" data-k="goal" data-v="${g[0]}"><span class="mk">${g[3]}</span><span><b>${g[1]}</b><small>${g[2]}</small></span></button>`).join('')}</div>
       <div class="field"><span class="flabel">Séances par semaine</span><div class="chips">${[2, 3, 4].map(n => `<button class="chipbtn ${o.days === n ? 'on' : ''}" data-act="obDays" data-v="${n}">${n} séances${n === 3 ? ' · conseillé' : ''}</button>`).join('')}</div></div>
       <div class="field"><span class="flabel">Tes jours de course (${o.weekdays.length}/${o.days})</span><div class="daypick">${DAYS.map((d, i) => `<button class="${o.weekdays.includes(i) ? 'on' : ''}" data-act="obDay" data-v="${i}" aria-pressed="${o.weekdays.includes(i)}">${d}</button>`).join('')}</div><small class="muted">La sortie longue tombe le week-end si tu y cours.</small></div>
+      <div class="field"><span class="flabel">Temps dispo pour une séance en semaine</span><div class="chips">${[30, 45, 60, 75].map(m => `<button class="chipbtn ${o.sessionMin === m ? 'on' : ''}" data-act="obSet" data-num="1" data-k="sessionMin" data-v="${m}">${m === 75 ? '75 min et +' : m + ' min'}</button>`).join('')}</div></div>
+      <div class="field"><span class="flabel">Temps pour la sortie longue (week-end)</span><div class="chips">${[60, 75, 90, 120].map(m => `<button class="chipbtn ${o.longMin === m ? 'on' : ''}" data-act="obSet" data-num="1" data-k="longMin" data-v="${m}">${m === 120 ? '2 h et +' : m === 60 ? '1 h' : m === 75 ? '1 h 15' : '1 h 30'}</button>`).join('')}</div></div>
+      <div class="field"><span class="flabel">Durée du programme</span><div class="chips">${[[8, '8 semaines · express'], [12, '12 semaines · conseillé'], [16, '16 semaines · en douceur']].map(([n, l]) => `<button class="chipbtn ${o.weeks === n ? 'on' : ''}" data-act="obSet" data-num="1" data-k="weeks" data-v="${n}">${l}</button>`).join('')}</div></div>
+      <div class="field"><span class="flabel">Où cours-tu le plus ?</span><div class="chips">${OB_TERRAIN.map(([k, l]) => `<button class="chipbtn ${o.terrain === k ? 'on' : ''}" data-act="obSet" data-k="terrain" data-v="${k}">${l}</button>`).join('')}</div></div>
       <div class="field"><span class="flabel">Début du plan</span><div class="chips"><button class="chipbtn ${o.start === 'next' ? 'on' : ''}" data-act="obSet" data-k="start" data-v="next">Lundi ${fmtDM(nextMonday(todayISO()))}</button><button class="chipbtn ${o.start === 'today' ? 'on' : ''}" data-act="obSet" data-k="start" data-v="today">Aujourd'hui</button></div></div>
       ${err}
     </div>
     <div class="ob-foot"><button class="btn btn-primary btn-block" data-act="obNext">Voir mon plan</button></div>`;
-  if (o.step === 5) {
+  if (o.step === 6) {
     const p = obProfile(); const prevS = S; S = blank(); S.profile = p; S.plan = buildPlan(p, obStart()); layout();
     const W1 = S.plan.weeks[0], last = S.plan.weeks[11];
     const html = `${top}
     <div class="ob-body">
-      <div class="stack" style="gap:6px"><p class="eyebrow">Ton plan · ${esc(p.first)}</p><h1 class="h1">12 semaines, ${p.days} séances, 3 blocs.</h1></div>
+      <div class="stack" style="gap:6px"><p class="eyebrow">Ton plan · ${esc(p.first)}</p><h1 class="h1">${p.weeks || 12} semaines, ${p.days} séances, 3 blocs.</h1></div>
       <div class="kpis"><div class="kpi"><b>${rangeTxt('ef')}</b><span>Endurance /km</span></div><div class="kpi"><b>${fmtKm(W1.sessions[W1.sessions.length - 1].dist || 0)}→${fmtKm(Math.max(...S.plan.weeks.map(W => W.sessions[W.sessions.length - 1].dist || 0)))}</b><span>Sortie longue km</span></div><div class="kpi"><b>${fmtDur(p.refPace * 5)}</b><span>5 km estimé</span></div></div>
+      ${tailoredHTML(p)}
       <div class="card stack"><p class="eyebrow">Semaine 1 · du ${fmtDM(W1.start)} au ${fmtDM(W1.end)}</p>${sortedSessions(W1).map(s => `<div class="between"><span class="row">${chip(s.type)}<b style="font-size:14px">${esc(s.title)}</b></span><span class="muted num" style="font-size:13px">${DAYS[wd(s.date)]}</span></div>`).join('')}</div>
       <section class="contract"><div class="row">${coachSVG(OB.coach, 'happy', 48)}<p class="eyebrow">Le contrat avec ${esc(OB.coach.name)}</p></div><ol>
         <li>Les sorties d'endurance restent lentes, même quand je me sens bien.</li>
@@ -1539,11 +1782,28 @@ function renderOB() {
     S = prevS; return html;
   }
 }
+function tailoredHTML(p) {
+  const W1 = S.plan.weeks[0], km1 = sum(W1.sessions.map(s => estimate(s, p.refPace).km));
+  const maxSL = Math.max(...S.plan.weeks.map(W => W.sessions[W.sessions.length - 1].dist || 0));
+  const inj = (p.injuries || []).map(z => ZONES[z].label.toLowerCase());
+  const items = [
+    `Départ à environ ${fmtKm(km1, 0)} km la première semaine${p.weeklyKm ? `, proche de tes ${p.weeklyKm} km actuels` : ''}.`,
+    `Séances de semaine de ${p.sessionMin >= 75 ? '75 min ou plus' : p.sessionMin + ' min maximum'}, sortie longue jusqu'à ${fmtKm(maxSL, 1)} km.`,
+    `${p.weeks || 12} semaines : une semaine allégée toutes les 4 et un test pour recalculer tes allures.`,
+  ];
+  if (p.age === '45_59' || p.age === '60p') items.push('Progression plus douce et récupération renforcée, adaptées à ton âge.');
+  if (inj.length) items.push(`Antécédents (${inj.join(', ')}) : distances augmentées plus lentement, et conseils de prévention.`);
+  if (p.life === 'high') items.push('Quotidien chargé : volume réduit de 10 % pour que tu récupères.');
+  if (p.terrain === 'piste') items.push('Fractionné et seuil sur piste : idéal pour tenir les allures.');
+  else if (p.terrain === 'chemins') items.push('Chemins : tes tibias te remercieront. Pour les blocs, cherche une portion plate.');
+  else if (p.terrain === 'tapis') items.push('Tapis : mets 1 % de pente pour retrouver les sensations de la route.');
+  return `<div class="card stack" style="gap:10px"><p class="eyebrow">Taillé pour toi</p><div class="db-list"><ul>${items.map(x => `<li class="g">${esc(x)}</li>`).join('')}</ul></div></div>`;
+}
 function obRefPace() { const t = parseDur(OB.t5k); return clamp(Math.round(OB.know5k && t ? t / 5 : OB.easyPace - 75), 200, 480); }
 function obStart() { return OB.start === 'today' ? todayISO() : nextMonday(todayISO()); }
 function obProfile() {
   const R = obRefPace();
-  return { first: OB.first.trim(), last: OB.last.trim(), username: OB.username.trim().toLowerCase(), experience: OB.experience, longestKm: OB.longestKm, goal: OB.goal, days: OB.days, weekdays: OB.weekdays.slice().sort((a, b) => a - b), refPace: R, refHistory: [{ date: todayISO(), R, source: OB.know5k && parseDur(OB.t5k) ? '5 km déclaré' : 'estimation' }], createdAt: todayISO() };
+  return { first: OB.first.trim(), last: OB.last.trim(), username: OB.username.trim().toLowerCase(), experience: OB.experience, longestKm: OB.longestKm, goal: OB.goal, days: OB.days, weekdays: OB.weekdays.slice().sort((a, b) => a - b), weeklyKm: OB.weeklyKm, age: OB.age, injuries: OB.injuries.slice(), life: OB.life, sessionMin: OB.sessionMin, longMin: OB.longMin, weeks: OB.weeks, terrain: OB.terrain, refPace: R, refHistory: [{ date: todayISO(), R, source: OB.know5k && parseDur(OB.t5k) ? '5 km déclaré' : 'estimation' }], createdAt: todayISO() };
 }
 function obValidate() {
   const o = OB;
@@ -1554,7 +1814,7 @@ function obValidate() {
   }
   if (o.step === 3 && o.know5k) { const t = parseDur(o.t5k); if (!t || t < 900 || t > 2700) return 'Indique ton temps au format 31:30 (entre 15 et 45 min).'; }
   if (o.step === 2 && !String(o.coach.name || '').trim()) return 'Donne un nom à ton coach.';
-  if (o.step === 4 && o.weekdays.length !== o.days) return `Choisis exactement ${o.days} jours.`;
+  if (o.step === 5 && o.weekdays.length !== o.days) return `Choisis exactement ${o.days} jours.`;
   return '';
 }
 
@@ -1578,7 +1838,7 @@ function renderToday() {
   h += demoBanner();
   h += redoPrompt(idx);
   const s = focusSession();
-  if (idx >= n && !s) h += `<section class="hero"><p class="eyebrow">Cycle terminé</p><h2 class="h2">12 semaines bouclées.</h2><p class="muted">Ton 5 km estimé : ${fmtDur(p.refPace * 5)}. On repart sur un nouveau cycle avec tes allures actuelles et ta sortie longue la plus récente.</p><button class="btn btn-primary" data-act="newCycle">Lancer le cycle suivant</button></section>`;
+  if (idx >= n && !s) h += `<section class="hero"><p class="eyebrow">Cycle terminé</p><h2 class="h2">${n} semaines bouclées.</h2><p class="muted">Ton 5 km estimé : ${fmtDur(p.refPace * 5)}. On repart sur un nouveau cycle avec tes allures actuelles et ta sortie longue la plus récente.</p><button class="btn btn-primary" data-act="newCycle">Lancer le cycle suivant</button></section>`;
   else if (s) h += sessionHero(s, idx < 0);
   if (s && s.date === t && !actFor(s.id)) h += checkinCard();
   h += coachBubble();
@@ -1598,7 +1858,7 @@ function renderToday() {
 function sessionHero(s, preStart) {
   const a = actFor(s.id), zk = zoneKey(s), e = estimate(s), ad = S.adapt[s.id];
   const head = `<div class="between">${chip(s.type)}<span class="when">${preStart ? 'Ton plan démarre ' : ''}${relDay(s.date)}${s.shift ? ' · déplacée' : ''}</span></div><h2 class="h2">${esc(s.title)}</h2>`;
-  if (a) return `<section class="hero">${head}<div class="done-box"><span class="row" style="font-weight:700;color:var(--good)">${ic('check')} Séance faite</span>${actLine(a)}</div><div class="row" style="gap:8px"><button class="btn btn-ghost" data-act="openSession" data-sid="${s.id}">Voir le détail</button></div></section>`;
+  if (a) return `<section class="hero">${head}<div class="done-box"><span class="row" style="font-weight:700;color:var(--good)">${ic('check')} Séance faite</span>${actLine(a)}<span class="pill ${VERDICT[debrief(a).verdict][1]}" style="align-self:flex-start">${VERDICT[debrief(a).verdict][0]}</span></div><div class="row" style="gap:8px"><button class="btn btn-primary" data-act="openAct" data-id="${a.id}">Voir le bilan</button></div></section>`;
   return `<section class="hero">${head}
     <div class="target" style="--tc:${zoneColor(zk)}"><span class="lbl">${isQ(s) ? 'Allure des blocs' : s.type === 'test' ? 'Repère' : 'Allure cible'}</span><span class="pace">${rangeTxt(zk)}<small>/km</small></span></div>
     ${ad ? `<p class="note">${ADAPT[ad]}</p>` : ''}
@@ -1750,9 +2010,10 @@ function renderProfile() {
   return `<header class="top"><h1 class="h1">Profil</h1></header>${demoBanner()}
   <section class="card row" style="gap:16px"><span class="avatar lg">${esc(initials())}</span><div style="min-width:0"><h2 class="h2">${esc(p.first)} ${esc(p.last)}</h2><p class="muted">@${esc(p.username)}</p><p class="muted" style="font-size:13px">${GOALS.find(g => g[0] === p.goal)[1]} · ${p.days} séances par semaine</p></div></section>
   <section class="kpis"><div class="kpi"><b>${fmtDur(p.refPace * 5)}</b><span>5 km estimé</span></div><div class="kpi"><b>${S.accepted}</b><span>conseils suivis</span></div><div class="kpi"><b>${S.overrides}</b><span>objections ignorées</span></div></section>
-  <section class="card row" style="gap:14px">${coachSVG(coachCfg(), 'happy', 72)}<div style="min-width:0;flex:1"><p class="eyebrow">Ton coach</p><h2 class="h2">${esc(coachCfg().name)}</h2><p class="muted" style="font-size:13px">${COACH_TONES[coachCfg().tone][0]} · ${COACH_TONES[coachCfg().tone][1]}</p></div><div class="stack" style="gap:6px"><button class="btn btn-primary" style="min-height:40px" data-act="openChat">Discuter</button><button class="btn btn-ghost" style="min-height:40px" data-act="openCoach">Modifier</button></div></section>
+  <section class="card stack" style="gap:14px"><div class="row" style="gap:14px">${coachSVG(coachCfg(), 'happy', 72)}<div><p class="eyebrow">Ton coach</p><h2 class="h2">${esc(coachCfg().name)}</h2><p class="muted" style="font-size:13px">${COACH_TONES[coachCfg().tone][0]} · ${COACH_TONES[coachCfg().tone][1]}</p></div></div><div class="grid2"><button class="btn btn-primary" data-act="openChat">Discuter</button><button class="btn btn-ghost" data-act="openCoach">Modifier</button></div></section>
   <section class="card"><div class="between" style="margin-bottom:4px"><h2 class="h3">Tes allures</h2><span class="muted" style="font-size:12.5px">${(p.refHistory || []).slice(-1)[0]?.source || ''}</span></div><div class="zones">${zones.map(z => `<div class="zrow"><i style="--c:${zoneColor(z)}"></i><span>${ZNAME[z]}<small>${{ ef: 'Footing, 80 % du volume', sl: 'Sortie longue', tempo: 'Blocs de seuil', allure: 'Allure objectif 10 km', frac: 'Fractions courtes' }[z]}</small></span><b>${rangeTxt(z)}</b></div>`).join('')}</div></section>
   ${S.pains.length ? `<section class="card"><div class="between" style="margin-bottom:4px"><h2 class="h3">Suivi des gênes</h2><button class="link" data-act="openPain">Signaler</button></div><div class="zones">${S.pains.slice().reverse().slice(0, 6).map(x => `<div class="zrow"><i style="--c:${x.resolved ? 'var(--line)' : x.level === 'stop' ? 'var(--bad)' : x.level === 'rest' ? 'var(--warn)' : 'var(--accent-2)'}"></i><span>${ZONES[x.zone].label}${x.side ? ' ' + x.side : ''}<small>${fmtDM(x.date)} · ${x.resolved ? 'passée' : 'en cours'}</small></span><b>${x.intensity}/10</b></div>`).join('')}</div></section>` : ''}
+  ${backupCard()}
   <div class="menu">
     <button data-act="openPain">Signaler une gêne ${ic('chev', 'ic-sm')}</button>
     <button data-act="openRecal">Recalibrer mes allures ${ic('chev', 'ic-sm')}</button>
@@ -1865,7 +2126,7 @@ function submitLog(form) {
 function coachReply(out, a) {
   return `<p class="eyebrow">Analyse du coach</p><h2 class="h1" style="padding-right:44px">${a.sessionId ? 'Séance enregistrée' : 'Course enregistrée'}</h2>
   ${actLine(a)}${mapBox(a.track)}
-  <div class="coach-list">${S.coach.filter(c => c.actId === a.id).map(coachItem).join('')}</div>
+  ${debriefHTML(a)}<div class="coach-list">${S.coach.filter(c => c.actId === a.id && (c.kind === 'test' || c.kind === 'alert')).map(coachItem).join('')}</div>
   <button class="btn btn-primary btn-block" data-act="closeSheet">Terminer</button>`;
 }
 function actSheet(id) {
@@ -1876,7 +2137,7 @@ function actSheet(id) {
   ${mapBox(a.track)}
   ${a.splits && a.splits.length ? `<div class="card stack"><h3 class="h3">Temps au kilomètre</h3>${splitsHTML(a.splits)}</div>` : ''}
   ${a.note ? `<p>${esc(a.note)}</p>` : ''}
-  <div class="coach-list">${S.coach.filter(c => c.actId === a.id).map(coachItem).join('')}</div>
+  ${debriefHTML(a)}<div class="coach-list">${S.coach.filter(c => c.actId === a.id && (c.kind === 'test' || c.kind === 'alert')).map(coachItem).join('')}</div>
   <div class="grid2"><button class="btn btn-ghost" data-act="openLog" data-act-id="${a.id}" data-sid="${a.sessionId || ''}">Modifier</button><button class="btn btn-ghost" data-act="delAct" data-id="${a.id}">Supprimer</button></div>`;
 }
 function negoSheet(sid, res) {
@@ -2133,9 +2394,10 @@ function runSaved(a) {
   const s = a.sessionId && findSession(a.sessionId), c = coachCfg();
   return `<p class="eyebrow">${a.source === 'sim' ? 'Simulation enregistrée' : 'Course enregistrée'}</p><h2 class="h1" style="padding-right:44px">${esc(s ? s.title : 'Sortie libre')}</h2>
   <div class="summary-grid"><div><b>${fmtKm(a.distKm || 0, 2)}</b><span>km</span></div><div><b>${fmtDur(a.durSec)}</b><span>durée</span></div><div><b>${fmtPace(a.paceSec)}</b><span>allure /km</span></div></div>
+  ${debriefHTML(a)}
   ${mapBox(a.track)}
   ${a.splits && a.splits.length ? `<div class="card stack"><h3 class="h3">Temps au kilomètre</h3>${splitsHTML(a.splits)}</div>` : ''}
-  <div class="coach-list">${S.coach.filter(x => x.actId === a.id).map(coachItem).join('')}</div>
+  <div class="coach-list">${S.coach.filter(x => x.actId === a.id && (x.kind === 'test' || x.kind === 'alert')).map(coachItem).join('')}</div>
   <form id="runForm" class="card stack" data-id="${a.id}" novalidate><h3 class="h3">Comment c'était ?</h3>
     <div class="field"><span class="flabel">Effort ressenti</span><div class="seg ten" role="radiogroup" aria-label="Effort ressenti">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<label><input type="radio" name="rpe" value="${n}">${n}</label>`).join('')}</div><small class="muted">1 = promenade · 5 = soutenu · 10 = à bloc</small></div>
     <div class="field"><span class="flabel">Une gêne ?</span><div class="seg" style="grid-template-columns:1fr 1fr" role="radiogroup" aria-label="Gêne"><label style="font-size:13px"><input type="radio" name="pain" value="0" checked>Aucune</label><label style="font-size:13px"><input type="radio" name="pain" value="1">Oui, je la situe</label></div></div>
@@ -2217,9 +2479,10 @@ function applyRecal(c, date) {
    ========================================================= */
 const A = {
   tab: el => { UI.tab = el.dataset.tab; render(); window.scrollTo(0, 0); if (UI.tab === 'plan') setTimeout(() => { const c = $('.week.cur'); c && c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); },
-  obNext: () => { if (OB.step >= 5) return; OB.err = obValidate(); if (OB.err) return render(); OB.step++; render(); window.scrollTo(0, 0); },
+  obNext: () => { if (OB.step >= 6) return; OB.err = obValidate(); if (OB.err) return render(); OB.step++; render(); window.scrollTo(0, 0); },
   obBack: () => { OB.err = ''; OB.step = Math.max(0, OB.step - 1); render(); },
-  obSet: el => { OB[el.dataset.k] = el.dataset.v; OB.err = ''; render(); },
+  obSet: el => { OB[el.dataset.k] = el.dataset.num ? +el.dataset.v : el.dataset.v; OB.err = ''; render(); },
+  obInj: el => { const v = el.dataset.v; OB.injuries = !v ? [] : OB.injuries.includes(v) ? OB.injuries.filter(x => x !== v) : OB.injuries.concat(v); render(); },
   obToggle5k: el => { OB.know5k = el.checked; render(); },
   obDays: el => { OB.days = +el.dataset.v; const pref = { 2: [2, 6], 3: [1, 3, 6], 4: [0, 2, 4, 6] }[OB.days]; if (OB.weekdays.length !== OB.days) OB.weekdays = pref; OB.err = ''; render(); },
   obDay: el => { const v = +el.dataset.v; const w = OB.weekdays; if (w.includes(v)) OB.weekdays = w.filter(x => x !== v); else if (w.length < OB.days) OB.weekdays = w.concat(v); else OB.weekdays = w.slice(1).concat(v); OB.err = ''; render(); },
@@ -2231,6 +2494,7 @@ const A = {
     coachSay('info', regen ? 'Nouveau plan prêt.' : `Bienvenue, ${p.first}.`, "Ton plan est prêt. Première règle : les sorties d'endurance se courent lentement. Je te le rappellerai.");
     const hasTest = S.plan.weeks.slice(0, 4).some(W => W.sessions.some(s => s.type === 'test'));
     if (!OB.know5k && hasTest) coachSay('info', 'Tes allures sont estimées', "Le premier test du plan va les caler sur ta vraie forme. D'ici là, en cas de doute, cours plus lentement.");
+    (p.injuries || []).slice(0, 3).reverse().forEach(z => coachSay('info', `Antécédent : ${ZONES[z].label.toLowerCase()}`, `${ZONES[z].tip} J'ai ralenti la progression de tes distances. Au moindre signal, signale-le avec « J'ai une gêne ».`));
     OB = null; persist(); UI.tab = 'today'; render(); window.scrollTo(0, 0); toast('Contrat signé. On y va.');
   },
   loadDemo: () => loadDemo(),
@@ -2256,6 +2520,10 @@ const A = {
   chatClear: () => { S.chat = []; persist(); openChat(); },
   chatPain: () => { closeChat(); openPain({}); },
   setDate: el => { $('#lf-date').value = el.dataset.v; },
+  toggleCode: () => { UI.showCode = !UI.showCode; render(); },
+  copyCode: el => { const c = S.syncKey; try { navigator.clipboard.writeText(c).then(() => toast('Code copié'), () => { UI.showCode = true; render(); toast('Sélectionne le code pour le copier'); }); } catch (e) { UI.showCode = true; render(); } },
+  exportData: () => exportData(),
+  openRestore: () => openSheet(restoreSheet()),
   openPain: () => openPain({}),
   painStill: el => { const pn = S.pains.find(x => x.id === el.dataset.id); openPain(pn ? { zone: pn.zone, side: pn.side, intensity: pn.intensity } : {}); },
   pzone: el => { PN.zone = el.dataset.z; PN.side = el.dataset.s; rerenderSheet(painSheet()); },
@@ -2303,7 +2571,7 @@ const A = {
   openRecal: () => openSheet(recalSheet()),
   openEdit: () => openSheet(editSheet()),
   openRegen: () => openSheet(regenSheet()),
-  regen: () => { closeSheet(); const p = S.profile; obInit(); Object.assign(OB, { step: 3, first: p.first, last: p.last, username: p.username, experience: p.experience, longestKm: p.longestKm, easyPace: p.refPace + 75, goal: p.goal, days: p.days, weekdays: p.weekdays.slice() }); const keep = S; S = Object.assign(blank(), keep); S.profile = null; renderRegen(keep); },
+  regen: () => { closeSheet(); const p = S.profile; obInit(); Object.assign(OB, { step: 3, first: p.first, last: p.last, username: p.username, experience: p.experience, longestKm: p.longestKm, easyPace: p.refPace + 75, goal: p.goal, days: p.days, weekdays: p.weekdays.slice(), weeklyKm: p.weeklyKm || 15, age: p.age || '30_44', injuries: (p.injuries || []).slice(), life: p.life || 'mid', sessionMin: p.sessionMin || 60, longMin: p.longMin || 90, weeks: p.weeks || 12, terrain: p.terrain || 'mixte' }); const keep = S; S = Object.assign(blank(), keep); S.profile = null; renderRegen(keep); },
   askReset: () => openSheet(resetSheet()),
   reset: () => { const ids = S.acts.map(a => a.id); S = blank(); OB = null; Store.clearLocal(); Store.write('core', () => null); ids.forEach(id => Store.write('a_' + id, () => null)); closeSheet(); UI.tab = 'today'; render(); window.scrollTo(0, 0); },
   delAct: el => { const id = el.dataset.id; S.coach = S.coach.filter(c => c.actId !== id); removeAct(id); closeSheet(); render(); toast('Course supprimée'); },
@@ -2321,7 +2589,7 @@ function renderRegen(keep) {
   A.obBack = () => { if (OB.step <= 3) { restore(); S = keep; OB = null; render(); } else origBack(); };
   A.obFinish = () => {
     restore();
-    const fresh = obProfile(); const p = Object.assign({}, keep.profile, { experience: fresh.experience, longestKm: fresh.longestKm, goal: fresh.goal, days: fresh.days, weekdays: fresh.weekdays, refPace: fresh.refPace, refHistory: (keep.profile.refHistory || []).concat(fresh.refHistory) });
+    const fresh = obProfile(); const p = Object.assign({}, keep.profile, { experience: fresh.experience, longestKm: fresh.longestKm, goal: fresh.goal, days: fresh.days, weekdays: fresh.weekdays, weeklyKm: fresh.weeklyKm, age: fresh.age, injuries: fresh.injuries, life: fresh.life, sessionMin: fresh.sessionMin, longMin: fresh.longMin, weeks: fresh.weeks, terrain: fresh.terrain, refPace: fresh.refPace, refHistory: (keep.profile.refHistory || []).concat(fresh.refHistory) });
     S = keep; S.profile = p; S.plan = buildPlan(p, obStart()); S.adapt = {}; S.skips = {}; S.decisions = {}; layout();
     coachSay('info', 'Nouveau plan prêt.', `Départ ${fmtDate(S.plan.start)}. Tes courses passées restent dans ton historique.`);
     OB = null; persist(); UI.tab = 'today'; render(); window.scrollTo(0, 0); toast('Nouveau plan signé');
@@ -2356,6 +2624,7 @@ document.addEventListener('input', e => {
     if (k === 'first' || k === 'last') { if (!OB.userTouched) { OB.username = (slug(OB.first) + (OB.last ? '.' + slug(OB.last) : '')).slice(0, 20); const u = $('#ob-username'); if (u) u.value = OB.username; } }
     if (k === 'username') OB.userTouched = true;
     if (k === 'longestKm') $('#ob-long-v').textContent = fmtKm(OB.longestKm);
+    if (k === 'weeklyKm') $('#ob-wk-v').textContent = OB.weeklyKm;
     if (k === 'easyPace') $('#ob-easy-v').textContent = fmtPace(OB.easyPace);
   }
   if (t.id === 'lf-dist' || t.id === 'lf-dur' || t.id === 'lf-pace') updateLogCalc();
@@ -2366,6 +2635,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.pace) quickPace(t.dataset.pace, t.value);
+  if (t.id === 'import-file' && t.files && t.files[0]) importData(t.files[0]);
   if (t.dataset.set) { S.settings[t.dataset.set] = t.checked; persist(); toast(t.checked ? 'Activé' : 'Désactivé'); }
 });
 document.addEventListener('keydown', e => {
@@ -2388,6 +2658,7 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target;
   if (f.id === 'chatForm') { chatSend($('#ch-in').value); return; }
+  if (f.id === 'restoreForm') { restoreWith($('#rs-code').value); return; }
   if (f.id === 'logForm') submitLog(f);
   if (f.id === 'runForm') {
     const a = S.acts.find(x => x.id === f.dataset.id); if (!a) return closeSheet();
@@ -2436,6 +2707,7 @@ function quickPace(sid, val) {
   render();
   splash();
   Store.connect();
+  cloudBoot();
   if (window.claude && typeof window.claude.use === 'function') window.claude.use('sample').then(x => { AI = x; }).catch(() => {});
   setTimeout(checkLiveResume, 60);
 })();
