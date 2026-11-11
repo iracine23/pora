@@ -1,4 +1,4 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><!-- Pora : icônes, manifest et partage — à coller dans <head> -->
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><!-- Pora : icônes, manifest et partage — à coller dans <head> -->
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -631,6 +631,16 @@ input[type=range]{margin:0}
 .lv-seg-bar i.k-work{background:color-mix(in srgb,var(--orange) 35%,var(--night-3))}
 .lv-seg-bar i.d{background:var(--night-ink-2)}
 .lv-seg-bar i.c{background:var(--orange)}
+
+/* behave like an installed app: no page zoom, no bounce, no text selection on controls */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{overscroll-behavior:none}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select,[contenteditable],.msg,.codebox span,.db-list li,.coach p,.cbubble p{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+input,textarea,select{font-size:max(16px,1em)}
+.pace-in{font-size:16px}
+img,svg{-webkit-user-drag:none}
+.leaflet-container{touch-action:pan-x pan-y pinch-zoom}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
@@ -2763,6 +2773,13 @@ document.addEventListener('keydown', e => {
   if (ra && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); A[ra.dataset.act] && A[ra.dataset.act](ra, e); }
   if (e.key === 'Enter' && e.target.dataset && e.target.dataset.ob && OB) { e.preventDefault(); A.obNext(); }
 });
+/* Block page zoom (pinch, double-tap) everywhere except on maps */
+(() => {
+  const onMap = e => e.target && e.target.closest && e.target.closest('.leaflet-container');
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => { if (!onMap(e)) e.preventDefault(); }, { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1 && !onMap(e)) e.preventDefault(); }, { passive: false });
+  document.addEventListener('dblclick', e => { if (!onMap(e)) e.preventDefault(); }, { passive: false });
+})();
 /* Bottom sheet: drag down to close */
 (() => {
   let y0 = null, dy = 0;
