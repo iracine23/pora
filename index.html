@@ -620,6 +620,17 @@ input[type=range]{margin:0}
 .db-next b{font-size:13px;color:var(--accent-2)}
 .codebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:var(--surface-2)}
 .codebox span{flex:1 1 160px;min-width:0;font-family:var(--f-num);font-size:22px;font-weight:700;letter-spacing:.05em}
+
+.lv-seg{background:var(--night-2);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.lv-seg-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.lv-seg-top b{font-family:var(--f-display);font-weight:800;font-size:18px;min-width:0}
+.lv-seg-top span{font-family:var(--f-num);font-weight:700;font-size:28px;line-height:1;flex:none}
+.lv-seg small{color:var(--night-ink-2);font-size:12.5px;font-weight:600}
+.lv-seg-bar{display:flex;gap:2px;height:6px}
+.lv-seg-bar i{border-radius:3px;background:var(--night-3);min-width:2px}
+.lv-seg-bar i.k-work{background:color-mix(in srgb,var(--orange) 35%,var(--night-3))}
+.lv-seg-bar i.d{background:var(--night-ink-2)}
+.lv-seg-bar i.c{background:var(--orange)}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
@@ -2187,6 +2198,110 @@ function speak(text) {
 }
 const paceWords = sec => { const s = Math.round(sec), m = Math.floor(s / 60), r = s % 60; return `${m} minute${m > 1 ? 's' : ''}${r ? ' ' + r : ''}`; };
 const durWords = sec => { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return `${h ? h + ' heure' + (h > 1 ? 's ' : ' ') : ''}${m} minute${m > 1 ? 's' : ''}`; };
+/* =========================================================
+   Session steps for the live run: warm-up, blocks, recoveries,
+   cool-down. The gauge and the verdict follow the current step.
+   ========================================================= */
+const secs = (a, b) => (+a) * 60 + (b ? +b : 0);
+function schedule(s) {
+  if (!s) return [{ kind: 'run', zone: 'ef', label: 'Sortie libre' }];
+  const ad = S.adapt[s.id];
+  if (ad === 'light' || ad === 'mini') return [{ kind: 'run', zone: 'ef', dur: estimate(s).min * 60, label: ad === 'mini' ? 'Version minimum' : 'Version allégée' }];
+  const out = [], steps = s.steps || [];
+  steps.forEach((x, i) => {
+    const L = x.label || '', D = x.detail || ''; let m;
+    if ((m = L.match(/^(\d+) × \((\d+) min(?: (\d+))? vif \/ (\d+) min(?: (\d+))? trot\)$/))) {
+      const n = +m[1];
+      for (let k = 1; k <= n; k++) { out.push({ kind: 'work', zone: x.zone, dur: secs(m[2], m[3]), n: k, of: n }); if (k < n) out.push({ kind: 'rec', zone: 'recup', dur: secs(m[4], m[5]) }); }
+    } else if ((m = L.match(/^(\d+) × (\d+) min$/))) {
+      const n = +m[1], r = D.match(/Récupération (\d+) min(?: (\d+))?/), rec = r ? secs(r[1], r[2]) : 90;
+      for (let k = 1; k <= n; k++) { out.push({ kind: 'work', zone: x.zone, dur: +m[2] * 60, n: k, of: n }); if (k < n) out.push({ kind: 'rec', zone: 'recup', dur: rec }); }
+    } else if ((m = L.match(/^(\d+) min$/))) {
+      const easy = ['ef', 'recup', 'sl'].includes(x.zone);
+      const kind = !easy ? 'work' : steps.length === 1 ? 'run' : i === 0 ? (/lignes droites/i.test(steps[1].label) ? 'run' : 'wu') : i === steps.length - 1 ? 'cd' : 'run';
+      out.push({ kind, zone: x.zone, dur: +m[1] * 60, n: 1, of: 1 });
+    } else if ((m = L.match(/^([\d,]+) km/))) {
+      const easy = ['ef', 'recup', 'sl'].includes(x.zone);
+      out.push({ kind: easy ? 'run' : 'work', zone: x.zone, dist: parseFloat(m[1].replace(',', '.')) * 1000, n: 1, of: 1 });
+    } else if (/lignes droites/i.test(L)) out.push({ kind: 'drill', zone: 'fartlek', dur: 300 });
+  });
+  if (ad === 'short') out.forEach(g => { if (g.kind === 'wu') g.dur = 600; if (g.kind === 'cd') g.dur = 300; });
+  if (ad === 'plus') { const g = out.find(x => x.kind === 'run' && x.dur); if (g) g.dur += 300; }
+  return out.length ? out : [{ kind: 'run', zone: zoneKey(s), label: s.title }];
+}
+const SEG_NAME = { wu: 'Échauffement', cd: 'Retour au calme', rec: 'Récupération', drill: 'Lignes droites', run: 'Course' };
+function segName(g, s) {
+  if (!g) return 'Séance terminée';
+  if (g.label) return g.label;
+  if (g.kind === 'work') return g.of > 1 ? `Bloc ${g.n} sur ${g.of}` : ZNAME[g.zone] || 'Bloc';
+  if (g.kind === 'run') return s ? (s.type === 'sl' ? 'Sortie longue' : s.type === 'recup' ? 'Récupération' : 'Endurance') : 'Sortie libre';
+  return SEG_NAME[g.kind];
+}
+const curSeg = st => st.sched ? st.sched[st.seg] || null : null;
+const segZone = (st, s) => { const g = curSeg(st); return g ? g.zone : (st.sched && st.sched.length ? 'ef' : (s ? zoneKey(s) : 'ef')); };
+const durShort = sec => { const m = Math.floor(sec / 60), r = Math.round(sec % 60); return m && r ? `${m} min ${pad(r)}` : m ? `${m} min` : `${r} s`; };
+const durSay = sec => { const m = Math.floor(sec / 60), r = Math.round(sec % 60); return `${m ? m + ' minute' + (m > 1 ? 's' : '') : ''}${m && r ? ' ' : ''}${r ? r + ' secondes' : ''}`; };
+function segAnnounce(st, s) {
+  const g = curSeg(st);
+  try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch (e) {}
+  if (!g) { speak('Séance terminée. Bravo ! Tu peux arrêter quand tu veux.'); liveToast('Séance terminée'); return; }
+  const r = zr(g.zone), name = segName(g, s), mid = r ? (r[0] + r[1]) / 2 : 0;
+  let say = name + '.';
+  if (g.kind === 'work') say += ` ${g.dur ? durSay(g.dur) : fmtKm(g.dist / 1000, 1) + ' kilomètres'} à ${paceWords(mid)} au kilomètre.`;
+  else if (g.kind === 'rec') say += ` ${durSay(g.dur)}, trottine tranquille.`;
+  else if (g.kind === 'cd') say += ' Très facile, jusqu\'au bout.';
+  else if (g.kind === 'drill') say += ' Accélère progressivement, retour en marchant.';
+  speak(say); liveToast(name);
+}
+function segAdvance(st, s) {
+  if (!st.sched) return;
+  let moved = false;
+  while (st.seg < st.sched.length) {
+    const g = st.sched[st.seg];
+    const doneT = g.dur && st.elapsed - st.segT >= g.dur * 1000;
+    const doneD = g.dist && st.dist - st.segD >= g.dist;
+    if (!(doneT || doneD) || (!g.dur && !g.dist)) break;
+    st.seg++; st.segT = st.elapsed; st.segD = st.dist; moved = true;
+  }
+  if (moved) { st.zoneCls = ''; st.warned = false; segAnnounce(st, s); segUI(st, s); }
+  const g = curSeg(st), nx = st.sched[st.seg + 1];
+  if (g && g.dur && nx && nx.kind === 'work' && !st.warned && g.dur * 1000 - (st.elapsed - st.segT) <= 5000) { st.warned = true; speak(`${segName(nx, s)} dans 5 secondes.`); }
+}
+function segUI(st, s) {
+  const g = curSeg(st), zk = segZone(st, s), r = zr(zk) || zr('ef');
+  const el = id => document.getElementById(id);
+  if (el('lv-seg-name')) el('lv-seg-name').textContent = segName(g, s);
+  const nx = st.sched && st.sched[st.seg + 1];
+  if (el('lv-seg-next')) el('lv-seg-next').textContent = !g ? 'Tu peux arrêter quand tu veux.' : nx ? `Ensuite : ${segName(nx, s)}${nx.dur ? ' · ' + durShort(nx.dur) : nx.dist ? ' · ' + fmtKm(nx.dist / 1000, 1) + ' km' : ''}` : st.sched.length > 1 ? 'Dernière étape' : '';
+  if (el('lv-tgt')) el('lv-tgt').innerHTML = g && g.kind === 'rec' ? 'Récupération : <b>trottine, sans chrono</b>' : `Cible <b>${fmtPace(r[0])}–${fmtPace(r[1])}</b> · ${ZNAME[zk]}`;
+  const z = el('lv-zone'); if (z) { z.style.setProperty('--zc', zoneColor(zk)); z.style.left = gaugePos(r[1], r) + '%'; z.style.right = (100 - gaugePos(r[0], r)) + '%'; }
+  const bar = el('lv-seg-bar');
+  if (bar && st.sched && st.sched.length > 1) bar.innerHTML = st.sched.map((x, i) => `<i class="${i < st.seg ? 'd' : i === st.seg ? 'c' : ''} k-${x.kind}" style="flex:${x.dur ? Math.max(1, x.dur / 60) : x.dist ? x.dist / 250 : 4}"></i>`).join('');
+}
+function segLeft(st) {
+  const g = curSeg(st); if (!g) return '';
+  if (g.dur) return fmtDur(Math.max(0, g.dur - (st.elapsed - st.segT) / 1000));
+  if (g.dist) return `${fmtKm(Math.max(0, g.dist - (st.dist - st.segD)) / 1000, 2)} km`;
+  return '';
+}
+/* Verdict on the current pace for the current step */
+function judge(st, g, cp, r) {
+  if (!g) return ['Séance terminée · tu peux arrêter', 'ok'];
+  if (g.kind === 'rec') return ['Récupère : trottine tranquille', 'ok'];
+  if (g.kind === 'drill') return ['Lignes droites : accélère progressivement', 'ok'];
+  const inSeg = st.elapsed - st.segT;
+  if (g.kind === 'work') {
+    if (inSeg < 15000 || !cp) return ['Lance-toi vers la cible', 'ok'];
+    if (cp < r[0] - 8) return ['Trop vite sur ce bloc. Lève le pied.', 'fast', true];
+    if (cp > r[1] + 8) return ['Sous la cible. Accélère un peu.', 'slow', true];
+    return ['Dans la zone', 'ok', true];
+  }
+  if (!cp || st.dist < 150) return ['', ''];
+  if (cp < r[0] - 5) return ['Trop vite. Ralentis.', 'fast', true];
+  if (cp > r[1] + 20) return ['Un peu lent. Relance doucement.', 'slow', true];
+  return ['Dans la zone', 'ok', true];
+}
+
 function liveOptions() {
   const t = todayISO();
   return allSessions().filter(s => !actFor(s.id) && !S.skips[s.id] && s.date >= addDays(t, -2) && s.date <= addDays(t, 3)).sort((a, b) => a.date < b.date ? -1 : 1).slice(0, 3);
@@ -2299,11 +2414,14 @@ function beginRun(resumed) {
   if (st.sim && !resumed) addPoint(simPoint(0), true);
   requestWake(); st.lastMoveAt = performance.now();
   if (!resumed) speak("C'est parti !");
-  const s = st.sid && findSession(st.sid), zk = s ? zoneKey(s) : 'ef', r = zr(zk);
+  const s = st.sid && findSession(st.sid);
+  if (!st.sched) { st.sched = schedule(s); st.seg = 0; st.segT = st.elapsed; st.segD = st.dist; }
+  const zk = segZone(st, s), r = zr(zk) || zr('ef');
   $('#live').innerHTML = `<div class="lv" id="lv-run"><div class="lv-top"><span class="lv-flag ${st.sim ? 'sim' : ''}" id="lv-flag">${st.sim ? 'Simulation ×15' : ic('gps', 'ic-sm') + ' GPS'}</span><span class="logo lv-brand" style="color:var(--night-ink);height:22px">${BRAND.wordmark}</span><span class="lv-flag">${esc(s ? s.title : 'Sortie libre')}</span></div>
   <div class="lv-clock" id="lv-clock">${fmtDur(st.elapsed / 1000)}</div>
+  <div class="lv-seg"><div class="lv-seg-top"><b id="lv-seg-name"></b><span id="lv-seg-left" class="num"></span></div>${st.sched.length > 1 ? '<div class="lv-seg-bar" id="lv-seg-bar"></div>' : ''}<small id="lv-seg-next"></small></div>
   <div class="lv-stats"><div><b id="lv-dist">${fmtKm(st.dist / 1000, 2)}</b><span>km</span></div><div><b id="lv-pace">--:--</b><span>allure /km</span></div><div><b id="lv-avg">--:--</b><span>moyenne</span></div></div>
-  <div class="gauge" aria-hidden="true"><div class="lv-target">Cible <b>${fmtPace(r[0])}–${fmtPace(r[1])}</b> · ${ZNAME[zk]}</div><div class="gauge-track"><span class="gauge-zone" style="--zc:${zoneColor(zk)};left:${gaugePos(r[1], r)}%;right:${100 - gaugePos(r[0], r)}%"></span><span class="gauge-cur" id="lv-cur" style="left:0%"></span></div><div class="gauge-lbl"><span>plus lent</span><span>plus vite</span></div></div>
+  <div class="gauge" aria-hidden="true"><div class="lv-target" id="lv-tgt">Cible <b>${fmtPace(r[0])}–${fmtPace(r[1])}</b> · ${ZNAME[zk]}</div><div class="gauge-track"><span class="gauge-zone" id="lv-zone" style="--zc:${zoneColor(zk)};left:${gaugePos(r[1], r)}%;right:${100 - gaugePos(r[0], r)}%"></span><span class="gauge-cur" id="lv-cur" style="left:50%;opacity:0"></span></div><div class="gauge-lbl"><span>plus lent</span><span>plus vite</span></div></div>
   <div class="lv-status" id="lv-status" aria-live="polite"></div>
   <div class="lv-map" id="lv-map">${hasMap() ? '' : routeSVG(st.pts, 320, 180)}</div>
   <div class="lv-target" id="lv-toast" style="min-height:20px;font-weight:800;color:var(--night-ink)"></div>
@@ -2319,13 +2437,14 @@ function beginRun(resumed) {
       RUN.me = Lf.marker(c, { icon: Lf.divIcon({ className: '', html: '<div class="me-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false }).addTo(RUN.map);
     } catch (e) { RUN.map = null; $('#lv-map').innerHTML = routeSVG(st.pts, 320, 180); }
   }
+  segUI(st, s); if (!resumed) setTimeout(() => RUN.st === st && st.sched.length > 1 && segAnnounce(st, s), 1600);
   clearInterval(RUN.timer); RUN.timer = setInterval(liveTick, 250);
 }
 function gaugePos(p, r) { const lo = r[0] - 50, hi = r[1] + 50; return clamp((hi - p) / (hi - lo) * 100, 0, 100); }
-function curPace(st) {
+function curPace(st, win = 30000, minD = 80) {
   const tr = st.trail; if (tr.length < 2) return null;
   const now = tr[tr.length - 1]; let j = tr.length - 1;
-  while (j > 0 && (now.t - tr[j].t < 30000 || now.d - tr[j].d < 80)) j--;
+  while (j > 0 && (now.t - tr[j].t < win || now.d - tr[j].d < minD)) j--;
   const dd = now.d - tr[j].d, dt = (now.t - tr[j].t) / 1000;
   return dd > 30 ? dt / (dd / 1000) : null;
 }
@@ -2337,32 +2456,31 @@ function liveTick() {
   if (st.running && !st.autoPaused) {
     st.elapsed += dt * (st.sim ? SIMX : 1);
     if (st.sim) {
-      const s = st.sid && findSession(st.sid), r = zr(s ? zoneKey(s) : 'ef'), target = (r[0] + r[1]) / 2;
-      const v = 1000 / target * (1 + 0.05 * Math.sin(st.elapsed / 50000) + 0.03 * Math.sin(st.elapsed / 9000));
+      const sg = curSeg(st), r = zr(sg ? sg.zone : 'ef') || zr('ef'), target = (r[0] + r[1]) / 2 + (sg && sg.kind === 'work' ? -4 : 0);
+      const v = 1000 / target * (1 + 0.035 * Math.sin(st.elapsed / 50000) + 0.02 * Math.sin(st.elapsed / 9000));
       st.simD += v * dt * SIMX / 1000; addPoint(simPoint(st.simD), true);
     }
   }
   if (S.settings.autopause && !st.sim && st.running && !st.autoPaused && st.gotFix && st.dist > 50 && st.lastMoveAt && now - st.lastMoveAt > 12000) { st.autoPaused = true; st.pauseAt = st.last || null; speak('Pause automatique'); liveToast('Pause automatique'); }
-  const s = st.sid && findSession(st.sid), r = zr(s ? zoneKey(s) : 'ef');
-  const cp = curPace(st), avg = st.dist > 30 ? (st.elapsed / 1000) / (st.dist / 1000) : null;
+  const s = st.sid && findSession(st.sid);
+  if (st.running) segAdvance(st, s);
+  const seg = curSeg(st), r = zr(segZone(st, s)) || zr('ef');
+  const quick = seg && ['work', 'rec', 'drill'].includes(seg.kind);
+  const cp = quick ? curPace(st, 12000, 30) : curPace(st), avg = st.dist > 30 ? (st.elapsed / 1000) / (st.dist / 1000) : null;
   const set = (id, v) => { const el = $(id); if (el && el.textContent !== v) el.textContent = v; };
-  set('#lv-clock', fmtDur(st.elapsed / 1000)); set('#lv-dist', fmtKm(st.dist / 1000, 2)); set('#lv-pace', fmtPace(cp)); set('#lv-avg', fmtPace(avg));
-  const cur = $('#lv-cur'); if (cur && cp) cur.style.left = gaugePos(cp, r) + '%';
+  set('#lv-clock', fmtDur(st.elapsed / 1000)); set('#lv-dist', fmtKm(st.dist / 1000, 2)); set('#lv-pace', fmtPace(cp)); set('#lv-avg', fmtPace(avg)); set('#lv-seg-left', segLeft(st));
+  const cur = $('#lv-cur'); if (cur) { if (cp) { cur.style.left = gaugePos(cp, r) + '%'; cur.style.opacity = 1; } else cur.style.opacity = 0; }
   const stEl = $('#lv-status');
   if (stEl) {
-    let cls = '', txt = '';
+    let cls = '', txt = '', judged = false;
     if (!st.running) txt = 'En pause';
     else if (st.autoPaused) { txt = 'Pause auto · repars quand tu veux'; cls = 'slow'; }
     else if (!st.sim && !st.gotFix) { txt = 'Recherche du signal GPS…'; cls = 'slow'; }
     else if (!st.sim && st.gpsErr === 'weak') { txt = 'Signal GPS faible'; cls = 'slow'; }
-    else if (cp && st.dist > 200) {
-      if (s && isQ(s)) { txt = 'Cale tes blocs sur la cible'; cls = 'ok'; }
-      else if (cp < r[0] - 5) { txt = 'Trop vite. Ralentis.'; cls = 'fast'; }
-      else if (cp > r[1] + 20) { txt = 'Un peu lent. Relance doucement.'; cls = 'slow'; }
-      else { txt = 'Dans la zone'; cls = 'ok'; }
-    }
+    else { const j = judge(st, seg, cp, r); txt = j[0]; cls = j[1]; judged = !!j[2]; }
     stEl.className = 'lv-status ' + cls; if (stEl.textContent !== txt) stEl.textContent = txt;
-    if (cls === 'fast' || txt.startsWith('Un peu')) { if (st.zoneCls !== cls) { st.zoneSince = now; st.zoneCls = cls; } else if (now - st.zoneSince > 20000 && now - (st.lastAlert || 0) > 90000) { st.lastAlert = now; speak(cls === 'fast' ? 'Trop vite. Ralentis.' : 'Un peu lent. Relance doucement.'); } } else { st.zoneCls = ''; }
+    const isWork = seg && seg.kind === 'work';
+    if (judged && (cls === 'fast' || cls === 'slow')) { if (st.zoneCls !== cls) { st.zoneSince = now; st.zoneCls = cls; } else if (now - st.zoneSince > (isWork ? 8000 : 20000) && now - (st.lastAlert || 0) > (isWork ? 30000 : 90000)) { st.lastAlert = now; speak(txt); } } else { st.zoneCls = ''; }
   }
   const fl = $('#lv-flag'); if (fl && !st.sim) fl.classList.toggle('warn', st.gpsErr === 'weak' || !st.gotFix);
   if (now - RUN.lastMap > 1000) {
@@ -2507,7 +2625,7 @@ const A = {
   liveManual: () => { const sid = RUN.sel; closeLive(); openSheet(logSheet(sid)); },
   livePause: el => { const st = RUN.st; if (!st) return; st.running = !st.running; st.autoPaused = false; st.last = null; speak(st.running ? 'Reprise' : 'Pause'); if (st.running) st.pts.push(null); el.innerHTML = st.running ? `${ic('pause')} Pause` : `${ic('play')} Reprendre`; $('#lv-run')?.classList.toggle('paused', !st.running); saveLive(); },
   liveStop: () => finishRun(),
-  liveResume: () => { const st = RUN.resume; RUN.resume = null; if (!st) return; if (st.running && !st.sim) st.elapsed += Date.now() - st.savedAt; delete st.savedAt; st.last = null; if (st.pts.length) st.pts.push(null); st.lastAlert = 0; st.zoneCls = ''; RUN.st = st; RUN.sel = st.sid; if (!st.sim) startGeo(); beginRun(true); },
+  liveResume: () => { const st = RUN.resume; RUN.resume = null; if (!st) return; if (st.running && !st.sim) st.elapsed += Date.now() - st.savedAt; delete st.savedAt; st.last = null; if (st.pts.length) st.pts.push(null); st.lastAlert = 0; st.zoneCls = ''; st.zoneSince = 0; RUN.st = st; RUN.sel = st.sid; if (!st.sim) startGeo(); beginRun(true); },
   liveResumeFinish: () => { const st = RUN.resume; RUN.resume = null; if (!st) return; delete st.savedAt; RUN.st = st; finishRun(); },
   liveResumeDrop: el => { if (!el.dataset.confirm) { el.dataset.confirm = 1; el.textContent = 'Confirmer : supprimer la course'; return; } RUN.resume = null; closeLive(); toast('Course supprimée'); },
   cb: el => { const k = el.dataset.k, v = el.dataset.v; CB[k] = v; refreshBuilder(); },
