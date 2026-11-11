@@ -641,6 +641,34 @@ input,textarea,select{font-size:max(16px,1em)}
 .pace-in{font-size:16px}
 img,svg{-webkit-user-drag:none}
 .leaflet-container{touch-action:pan-x pan-y pinch-zoom}
+
+/* plan "Tableau" on phones */
+.wk-jump{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin:0 -2px;background:var(--bg);scrollbar-width:none}
+.wk-jump::-webkit-scrollbar{display:none}
+.wk-jump button{flex:none;min-width:46px;height:38px;padding:0 10px;border-radius:999px;background:var(--surface);border:1.5px solid var(--line);font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.wk-jump button.ok{border-color:var(--good);color:var(--good)}
+.wk-jump button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pt-list{display:flex;flex-direction:column;gap:12px}
+.pt-week{background:var(--surface);border-radius:var(--r);padding:4px 14px 2px;scroll-margin-top:calc(62px + env(safe-area-inset-top,0px))}
+.pt-week.cur{box-shadow:0 0 0 2px var(--ink)}
+.pt-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0 8px}
+.pt-head b{display:block;font-family:var(--f-display);font-size:16px}
+.pt-head span{font-size:12.5px;color:var(--ink-2)}
+.pt-sum{font-weight:700;font-size:13px;color:var(--ink-2);flex:none}
+.pt-row{display:grid;grid-template-columns:32px 4px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.pt-row .d{font-size:11.5px;color:var(--ink-2);font-weight:600;line-height:1.1;text-align:center}
+.pt-row .d b{display:block;font-family:var(--f-num);font-size:19px;color:var(--ink)}
+.pt-row .bar{width:4px;height:38px;border-radius:2px;background:var(--c)}
+.pt-row .t{text-align:left;font-weight:650;font-size:14.5px;line-height:1.25;min-width:0;padding:4px 0;color:var(--ink)}
+.pt-row .t small{display:block;font-weight:500;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.pt-in{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pt-in .pace-in{width:76px;height:44px;text-align:center;border-radius:12px;font-family:var(--f-num);font-size:20px;font-weight:700;padding:0 4px;letter-spacing:.02em}
+.pt-in .pace-in:focus{outline:none;border-color:var(--accent-2);box-shadow:0 0 0 3px var(--accent-soft)}
+.pv{font-style:normal;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
+.pv:empty{display:none}
+.pv.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pv.fast{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.pv.slow{background:var(--surface-2);color:var(--ink-2)}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
@@ -1913,15 +1941,21 @@ function redoPrompt(idx) {
   return `<section class="coach k-objection"><div class="mk">!</div><div><span class="kl">Objection</span><h3>Semaine ${W.n} non validée (${info.done}/${info.total})</h3><p>${started ? "Tu as déjà commencé la semaine en cours, donc on continue. Mais pas de volume en plus : ton corps n'a pas eu la charge prévue." : "Avancer quand même, c'est augmenter la charge sur un corps qui n'a pas fait le travail. Je te conseille de refaire cette semaine."}</p><div class="row" style="flex-wrap:wrap;gap:8px;margin-top:10px">${started ? `<button class="btn btn-primary" style="min-height:40px" data-act="decide" data-w="${W.id}" data-v="ok">Compris</button>` : `<button class="btn btn-primary" style="min-height:40px" data-act="redoWeek" data-w="${W.id}">Refaire la semaine ${W.n}</button><button class="btn btn-ghost" style="min-height:40px" data-act="decide" data-w="${W.id}" data-v="assume">J'avance, je l'assume</button>`}</div></div></section>`;
 }
 
+function paceVerdict(s, p) {
+  const r = zr(zoneKey(s)); if (!r) return null;
+  if (s.type === 'test') return ['ok', 'Fait'];
+  if (isQ(s)) return p < r[0] - 8 ? ['fast', 'Vite'] : p > r[1] + 10 ? ['slow', 'Lent'] : ['ok', 'Zone'];
+  return p < r[0] - 5 ? ['fast', 'Vite'] : p > r[1] + 15 ? ['slow', 'Lent'] : ['ok', 'Zone'];
+}
 function renderPlan() {
   const P = S.plan, idx = curWeekIdx();
   let h = `<header class="top"><div><p class="eyebrow">Du ${fmtDM(P.weeks[0].start)} au ${fmtDM(P.weeks[P.weeks.length - 1].end)}</p><h1 class="h1">Ton plan</h1></div><div class="seg-toggle" role="tablist"><button class="${UI.planView === 'weeks' ? 'on' : ''}" data-act="planView" data-v="weeks">Semaines</button><button class="${UI.planView === 'table' ? 'on' : ''}" data-act="planView" data-v="table">Tableau</button></div></header>`;
   h += demoBanner();
   h += `<div class="legend">${['ef', 'sl', 'tempo', 'frac', 'test'].map(chip).join('')}</div>`;
   if (UI.planView === 'table') {
-    const maxS = Math.max(...P.weeks.map(W => W.sessions.length));
-    h += `<p class="muted" style="font-size:13.5px">Saisis ton allure dans chaque case (ex. 6:45). Pour le fractionné et le seuil, mets l'allure des blocs rapides. Le coach réagit à chaque saisie.</p>`;
-    h += `<div class="tbl-wrap"><table class="ptab"><thead><tr><th>Semaine</th>${[...Array(maxS)].map((_, i) => `<th>Séance ${i + 1}</th>`).join('')}</tr></thead><tbody>${P.weeks.map((W, i) => `<tr class="${i === idx ? 'cur' : ''}"><td class="w">${W.n}<small>${W.deload ? 'allégée' : PHASES[W.phase].name}${W.repeat ? ' · reprise' : ''}</small></td>${sortedSessions(W).map(s => { const a = actFor(s.id); return `<td><div class="cell"><span>${chip(s.type)}</span><b>${esc(s.title)}</b><small>${DAYS[wd(s.date)]} ${parseISO(s.date).getDate()} · cible ${rangeTxt(zoneKey(s))}</small><input class="pace-in ${a && a.paceSec ? 'has' : ''}" inputmode="decimal" placeholder="Mon allure" aria-label="Mon allure, semaine ${W.n}, ${esc(s.title)}" data-pace="${s.id}" id="pi-${s.id}" value="${a && a.paceSec ? fmtPace(a.paceSec) : ''}"></div></td>`; }).join('')}${W.sessions.length < maxS ? '<td></td>'.repeat(maxS - W.sessions.length) : ''}</tr>`).join('')}</tbody></table></div>`;
+    h += `<p class="muted" style="font-size:13.5px">Après chaque séance, tape ton allure : 645 pour 6:45. Pour le seuil et le fractionné, mets l'allure des blocs. ${esc(coachCfg().name)} réagit à chaque saisie.</p>`;
+    h += `<nav class="wk-jump" aria-label="Aller à une semaine">${P.weeks.map((W, i) => { const v = weekInfo(W).verdict; return `<button class="${i === idx ? 'on' : ''} ${v === 'full' || v === 'partial' ? 'ok' : ''}" data-act="jumpWeek" data-n="${W.n}" aria-label="Semaine ${W.n}">S${W.n}</button>`; }).join('')}</nav>`;
+    h += `<div class="pt-list">${P.weeks.map((W, i) => { const info = weekInfo(W); return `<section class="pt-week ${i === idx ? 'cur' : ''}" id="pt-${W.n}"><header class="pt-head"><div><b>Semaine ${W.n}</b><span>${W.deload ? 'Allégée' : PHASES[W.phase].name}${W.repeat ? ' · reprise' : ''} · ${fmtDM(W.start)} – ${fmtDM(W.end)}</span></div><span class="pt-sum num">${info.done}/${info.total} · ${fmtKm(info.km)} km</span></header>${sortedSessions(W).map(s => { const a = actFor(s.id), v = a && a.paceSec ? paceVerdict(s, a.paceSec) : null; return `<div class="pt-row"><span class="d">${DAYS[wd(s.date)]}<b>${parseISO(s.date).getDate()}</b></span><span class="bar" style="--c:${TYPES[s.type].c}"></span><button class="t" data-act="openSession" data-sid="${s.id}">${esc(s.title)}<small>cible ${rangeTxt(zoneKey(s))}${isQ(s) ? ' · blocs' : ''}</small></button><label class="pt-in"><span class="sr">Mon allure, semaine ${W.n}, ${esc(s.title)}</span><input class="pace-in ${a && a.paceSec ? 'has' : ''}" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" placeholder="--:--" maxlength="5" data-pace="${s.id}" id="pi-${s.id}" value="${a && a.paceSec ? fmtPace(a.paceSec) : ''}"><i class="pv ${v ? v[0] : ''}" id="pv-${s.id}">${v ? v[1] : ''}</i></label></div>`; }).join('')}</section>`; }).join('')}</div>`;
     return h;
   }
   h += P.weeks.map((W, i) => {
@@ -2695,7 +2729,8 @@ const A = {
     S.plan = buildPlan(p, nextMonday(addDays(todayISO(), 1))); S.adapt = {}; S.skips = {}; S.decisions = {}; layout();
     coachSay('info', 'Nouveau cycle', `Départ lundi. Sortie longue de départ : ${S.plan.weeks[0].sessions.slice(-1)[0].title}.`); persist(); render();
   },
-  planView: el => { UI.planView = el.dataset.v; render(); },
+  planView: el => { UI.planView = el.dataset.v; render(); const idx = curWeekIdx(); if (UI.planView === 'table' && idx > 0) setTimeout(() => { const w = document.getElementById('pt-' + (idx + 1)); w && w.scrollIntoView({ block: 'start' }); }, 30); },
+  jumpWeek: el => { const w = document.getElementById('pt-' + el.dataset.n); if (w) w.scrollIntoView({ behavior: 'smooth', block: 'start' }); $$('.wk-jump button').forEach(b => b.classList.toggle('on', b === el)); },
   openRecal: () => openSheet(recalSheet()),
   openEdit: () => openSheet(editSheet()),
   openRegen: () => openSheet(regenSheet()),
@@ -2755,6 +2790,7 @@ document.addEventListener('input', e => {
     if (k === 'weeklyKm') $('#ob-wk-v').textContent = OB.weeklyKm;
     if (k === 'easyPace') $('#ob-easy-v').textContent = fmtPace(OB.easyPace);
   }
+  if (t.dataset.pace) { const d = t.value.replace(/\D/g, '').slice(0, 4); const f = d.length >= 3 ? d.slice(0, d.length - 2) + ':' + d.slice(-2) : d; if (t.value !== f) t.value = f; }
   if (t.id === 'lf-dist' || t.id === 'lf-dur' || t.id === 'lf-pace') updateLogCalc();
   if (t.dataset.cbname && CB) { CB.name = t.value; const nm = $('.builder-stage .nm'); if (nm) nm.textContent = t.value || 'Ton coach'; }
   if (t.id === 'ch-in') { t.style.height = 'auto'; t.style.height = Math.min(130, t.scrollHeight) + 'px'; }
@@ -2768,6 +2804,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (!$('#sheet').hidden) closeSheet(); else if (!$('#chat').hidden) closeChat(); }
+  if (e.target.dataset && e.target.dataset.pace && e.key === 'Enter') { e.preventDefault(); e.target.blur(); return; }
   if (e.target.id === 'ch-in' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); chatSend(e.target.value); return; }
   const ra = e.target.closest && e.target.closest('[data-act][role=button]');
   if (ra && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); A[ra.dataset.act] && A[ra.dataset.act](ra, e); }
@@ -2830,6 +2867,7 @@ function quickPace(sid, val) {
   S.coach = S.coach.filter(c => c.actId !== a.id);
   const out = analyze(a); saveAct(a);
   toast(out[0][1]);
+  const pv = $('#pv-' + sid), pvv = paceVerdict(s, p); if (pv && pvv) { pv.className = 'pv ' + pvv[0]; pv.textContent = pvv[1]; }
   const el = $('#pi-' + sid); if (el) el.classList.add('has');
 }
 
