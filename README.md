@@ -2,6 +2,6 @@
 
 Ton coach de course. Un tour après l'autre.
 
-Site : https://iracine23.github.io/pora/
+Site : https://pora-coach.pages.dev/
 
 Ce dépôt est généré par `appli/build.sh` à partir de `appli/pora.html`.
