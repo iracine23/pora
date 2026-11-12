@@ -1,11 +1,15 @@
 // Pora — coach IA (Cloudflare Workers AI). POST { prompt } -> { text }
-const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' };
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...CORS } });
+export async function onRequestOptions() { return new Response(null, { status: 204, headers: CORS }); }
 const SYSTEM = "Tu es un coach de course à pied francophone, précis et bienveillant. Tu réponds toujours en français, en tutoyant, de façon concrète et courte, sans titres ni listes à puces. Tu suis les consignes de style données dans le message.";
 export async function onRequestGet({ env }) { return json({ ok: true, ai: !!env.AI }); }
 export async function onRequestPost({ request, env }) {
   let prompt;
   try { ({ prompt } = await request.json()); } catch (e) { return json({ error: 'bad_json' }, 400); }
-  if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 8000) return json({ error: 'bad_request' }, 400);
+  if (typeof prompt !== 'string' || !prompt.trim()) return json({ error: 'bad_request' }, 400);
+  // Long conversations are trimmed, never refused: keep the start (coach context) and the end (the question).
+  if (prompt.length > 14000) prompt = prompt.slice(0, 5000) + '\n[…]\n' + prompt.slice(-9000);
   if (!env.AI) return json({ error: 'no_ai' }, 503);
   const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }];
   let out = null;

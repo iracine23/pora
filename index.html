@@ -687,6 +687,18 @@ img,svg{-webkit-user-drag:none}
 .daypick.dispo button{height:60px;display:grid;place-content:center;gap:2px}
 .daypick.dispo span{font-size:11.5px;font-weight:700}
 .daypick.dispo b{font-family:var(--f-num);font-size:20px}
+
+.wx{display:grid;gap:12px}
+.wx-row{display:flex;gap:12px;align-items:flex-start}
+.wx-row>div{min-width:0}
+.wx-ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:var(--accent-soft);color:var(--accent-2)}
+.wx-strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
+.wx-strip span{display:grid;justify-items:center;gap:2px;padding:8px 2px;border-radius:12px;background:var(--surface-2);min-width:0}
+.wx-strip span.on{background:var(--ink);color:var(--bg)}
+.wx-strip small{font-size:11.5px;font-weight:600;opacity:.75;white-space:nowrap}
+.wx-strip b{font-size:18px;font-weight:700}
+.wx-strip i{font-style:normal;font-size:10.5px;font-weight:700;opacity:.7;white-space:nowrap}
+.wx-tip{font-size:13.5px;line-height:1.45;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
@@ -1485,7 +1497,7 @@ function localAnswer(raw) {
   const q = ' ' + norm(raw) + ' '; LASTQ = q;
   let best = null, score = 0;
   KB.forEach(e => { const sc = e.k.reduce((n, w) => n + (q.includes(w) ? (w.length > 6 ? 2 : 1) : 0), 0); if (sc > score) { score = sc; best = e; } });
-  if (!best) return { text: `Je n'ai pas de réponse précise à ça${AI ? '' : ' en mode hors ligne'}. Je peux t'aider sur ta séance du jour, tes allures, ta progression, une douleur, la nutrition, la météo, la motivation, les vacances, le matériel ou la technique. Reformule, ou touche une suggestion ci-dessous.` };
+  if (!best) return { text: `${navigator.onLine === false ? "Tu n'as pas de réseau en ce moment, alors je ne peux pas chercher plus loin. " : "Je n'ai pas réussi à te répondre, réessaie dans un instant. "}En attendant, je peux t'aider sur ta séance du jour, tes allures, ta progression, une douleur, la nutrition, la météo, la motivation, les vacances, le matériel ou la technique. Reformule, ou touche une suggestion ci-dessous.` };
   return { text: best.a(q), act: best.act };
 }
 const PAIN_WORDS = ['douleur', 'mal ', 'mal au', 'gene', 'blesse', 'genou', 'tibia', 'cheville', 'mollet', 'achille', 'tendin', 'periostite'];
@@ -1493,7 +1505,7 @@ function coachPrompt(q) {
   const c = coachCfg(), p = S.profile, { i, W } = ctxWeek(), s = focusSession();
   const recent = S.acts.slice().sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 5).map(a => `${a.date} ${a.stitle || 'sortie libre'} ${a.distKm ? fmtKm(a.distKm, 1) + ' km' : ''} ${a.paceSec ? fmtPace(a.paceSec) + '/km' : ''} effort ${a.rpe || '?'}/10`).join(' ; ');
   const pains = S.pains.slice(-3).map(x => `${x.date} ${ZONES[x.zone].label} ${x.side || ''} ${x.intensity}/10${x.resolved ? ' (passée)' : ''}`).join(' ; ');
-  const hist = S.chat.slice(-9, -1).map(m => `${m.me ? p.first : c.name} : ${m.text}`).join('\n');
+  const hist = S.chat.slice(-7, -1).map(m => `${m.me ? p.first : c.name} : ${String(m.text).slice(0, 380)}`).join('\n');
   const prompt = `Tu es ${c.name}, le coach de course à pied de l'appli Pora. Ton style : ${COACH_TONES[c.tone][1]} Tu tutoies ${p.first}. Réponds en français à TOUTE question, même éloignée de la course, de façon utile et concrète, en 120 mots maximum, sans liste à puces ni titres. Pour la course, appuie-toi sur le contexte ci-dessous. Tu n'es pas médecin : en cas de douleur forte, qui dure, au repos ou avec gonflement, ou pour une question médicale, dis de consulter un professionnel de santé.
 Contexte : objectif « ${GOALS.find(g => g[0] === p.goal)[1]} », ${p.days} séances par semaine, ${p.weeklyKm != null ? p.weeklyKm + ' km par semaine au départ' : ''}, séances de ${p.sessionMin || 60} min en semaine, sortie longue jusqu'à ${p.longMin || 90} min, blessures passées : ${(p.injuries || []).map(z => ZONES[z].label).join(', ') || 'aucune'}, quotidien ${({ low: 'calme', mid: 'normal', high: 'très chargé' })[p.life] || 'normal'}. Semaine ${i + 1} sur ${S.plan.weeks.length} (${W.deload ? 'semaine allégée' : PHASES[W.phase].name}). Allures : endurance ${rangeTxt('ef')}/km, seuil ${rangeTxt('tempo')}/km, fractionné ${rangeTxt('frac')}/km ; 5 km estimé ${fmtDur(p.refPace * 5)}. Prochaine séance : ${s ? s.title + ', ' + relDay(s.date).toLowerCase() : 'aucune'}. Dernières courses : ${recent || 'aucune'}. Gênes : ${pains || 'aucune'}.
 ${hist ? 'Conversation jusqu\'ici :\n' + hist + '\n' : ''}Nouvelle question de ${p.first} : ${q}`;
@@ -1502,7 +1514,7 @@ ${hist ? 'Conversation jusqu\'ici :\n' + hist + '\n' : ''}Nouvelle question de $
 async function aiAnswer(q) { const r = await AI(coachPrompt(q), { modelTier: 'default' }); return (r && r.text || '').trim(); }
 function openChat(prefill) {
   if (!S.chat) S.chat = [];
-  if (!S.chat.length) S.chat.push({ me: false, text: `Salut ${S.profile.first}, c'est ${coachCfg().name}. Pose-moi toutes tes questions : ta séance, tes allures, une douleur, la nutrition, la motivation… ${AI || ONLINE ? 'Je réponds à tout.' : ''}`, t: Date.now() });
+  if (!S.chat.length) S.chat.push({ me: false, text: `Salut ${S.profile.first}, c'est ${coachCfg().name}. Pose-moi toutes tes questions : ta séance, tes allures, une douleur, la nutrition, la motivation… Je réponds à tout.`, t: Date.now() });
   const el = $('#chat'); el.hidden = false; document.body.classList.add('noscroll');
   renderChat();
   setTimeout(() => { const i = $('#ch-in'); if (i && !('ontouchstart' in window)) i.focus(); }, 50);
@@ -1513,7 +1525,7 @@ let CHAT_BUSY = false;
 function renderChat() {
   const c = coachCfg(), el = $('#chat');
   const draft = $('#ch-in') ? $('#ch-in').value : '';
-  el.innerHTML = `<header class="ch-head"><span class="ch-av">${coachSVG(c, CHAT_BUSY ? 'neutral' : 'happy', 44)}</span><div class="t"><b>${esc(c.name)}</b><small>${CHAT_BUSY ? 'écrit…' : AI ? 'Ton coach · répond à tout avec Claude' : ONLINE ? 'Ton coach · répond à toutes tes questions' : 'Ton coach · réponses hors ligne'}</small></div>${S.chat.length > 1 ? `<button class="ch-clear" data-act="chatClear">Effacer</button>` : ''}<button class="ch-x" data-act="closeChat" aria-label="Fermer la conversation">${ic('x')}</button></header>
+  el.innerHTML = `<header class="ch-head"><span class="ch-av">${coachSVG(c, CHAT_BUSY ? 'neutral' : 'happy', 44)}</span><div class="t"><b>${esc(c.name)}</b><small>${CHAT_BUSY ? 'écrit…' : 'Ton coach · répond à toutes tes questions'}</small></div>${S.chat.length > 1 ? `<button class="ch-clear" data-act="chatClear">Effacer</button>` : ''}<button class="ch-x" data-act="closeChat" aria-label="Fermer la conversation">${ic('x')}</button></header>
   <div class="ch-body" id="ch-body" role="log" aria-live="polite">${S.chat.map(m => m.me ? `<div class="msg me">${esc(m.text)}</div>` : `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot">${esc(m.text)}${m.act ? `<button class="btn btn-primary" style="margin-top:10px;min-height:38px;font-size:13.5px" data-act="${m.act[0]}">${m.act[1]}</button>` : ''}</div></div>`).join('')}${CHAT_BUSY ? `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot typing" aria-label="${esc(c.name)} écrit"><i></i><i></i><i></i></div></div>` : ''}</div>
   <footer class="ch-foot"><div class="ch-sugg">${CHAT_SUGG.map(s => `<button data-act="chatSugg" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
   <form id="chatForm" class="ch-form" novalidate><label for="ch-in" class="sr">Ta question</label><textarea id="ch-in" rows="1" placeholder="Écris ta question…" enterkeyhint="send">${esc(draft)}</textarea><button class="ch-send" type="submit" aria-label="Envoyer" ${CHAT_BUSY ? 'disabled' : ''}>${ic('send')}</button></form></footer>`;
@@ -1526,7 +1538,7 @@ async function chatSend(q) {
   CHAT_BUSY = true; renderChat();
   let ans = null;
   if (AI) { try { const t = await aiAnswer(q); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; } catch (e) { ans = null; } }
-  if (!ans && ONLINE) { const t = await remoteAnswer(coachPrompt(q)); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; }
+  if (!ans) { const t = await remoteAnswer(coachPrompt(q), true); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; }
   if (!ans) { await new Promise(r => setTimeout(r, 450 + Math.random() * 350)); ans = localAnswer(q); }
   CHAT_BUSY = false;
   S.chat.push({ me: false, text: ans.text, act: ans.act || null, t: Date.now() }); S.chat = S.chat.slice(-40);
@@ -1614,9 +1626,10 @@ function debriefHTML(a) {
     ${d.bad.length ? `<div class="db-list"><p class="db-t warn">À améliorer</p><ul>${d.bad.map(x => `<li class="b">${esc(x)}</li>`).join('')}</ul></div>` : ''}
     ${d.next.length ? `<div class="db-next"><b>La prochaine fois</b>${d.next.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''}
     <p class="db-saved">${ic('check', 'ic-sm')} Enregistrée dans ton historique${ONLINE && !S.demo ? ' et sauvegardée en ligne' : ''}</p>
+    ${a.distKm ? `<button class="btn btn-ghost btn-block" data-act="shareRun" data-id="${a.id}">Partager ma course en story</button>` : ''}
   </section>`;
 }
-const canAI = () => !!AI || (typeof ONLINE !== 'undefined' && ONLINE);
+const canAI = () => !!AI || navigator.onLine !== false;
 const NOTE_PENDING = new Set();
 function coachNoteHTML(a) {
   if (a.coachNote) return `<div class="db-note" id="cn-${a.id}"><b>L'analyse de ${esc(coachCfg().name)}</b><p>${esc(a.coachNote)}</p></div>`;
@@ -1658,13 +1671,19 @@ async function requestCoachNote(a) {
    Online: AI coach and permanent backup on the hosted site
    ========================================================= */
 const ONLINE = location.protocol === 'https:' && !(window.claude && typeof window.claude.use === 'function');
-async function remoteAnswer(prompt) {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 25000);
-  try {
-    const r = await fetch('/api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }), signal: ctl.signal });
-    if (!r.ok) return null;
-    const j = await r.json(); return (j && j.text || '').trim() || null;
-  } catch (e) { return null; } finally { clearTimeout(t); }
+// The coach server lives on pora-coach.pages.dev; other copies of the app (GitHub Pages, home-screen app) call it there.
+const API = /(^|\.)pora-coach\.pages\.dev$/.test(location.hostname) ? '' : 'https://pora-coach.pages.dev';
+async function remoteAnswer(prompt, retry) {
+  for (let n = 0; n < (retry ? 2 : 1); n++) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 25000);
+    try {
+      const r = await fetch(API + '/api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }), signal: ctl.signal });
+      if (r.ok) { const j = await r.json(); const x = (j && j.text || '').trim(); if (x) return x; }
+    } catch (e) {} finally { clearTimeout(t); }
+    if (navigator.onLine === false) return null;
+    await new Promise(r => setTimeout(r, 900));
+  }
+  return null;
 }
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function newSyncCode() {
@@ -2060,6 +2079,7 @@ function renderToday() {
   const s = focusSession();
   if (idx >= n && !s) h += `<section class="hero"><p class="eyebrow">Cycle terminé</p><h2 class="h2">${n} semaines bouclées.</h2><p class="muted">Ton 5 km estimé : ${fmtDur(p.refPace * 5)}. On repart sur un nouveau cycle avec tes allures actuelles et ta sortie longue la plus récente.</p><button class="btn btn-primary" data-act="newCycle">Lancer le cycle suivant</button></section>`;
   else if (s) h += sessionHero(s, idx < 0);
+  if (s && !actFor(s.id)) h += wxCard(s);
   if (s && s.date === t && !actFor(s.id)) h += checkinCard();
   h += coachBubble();
   h += missedCard();
@@ -2085,6 +2105,92 @@ function sessionHero(s, preStart) {
     <p class="est">≈ ${e.min} min · ≈ ${fmtKm(e.km)} km · ${esc(s.steps.map(x => x.label).join(' + '))}</p>
     <div class="actions"><button class="btn btn-go" data-act="openLive" data-sid="${s.id}">GO</button><button class="btn btn-primary" data-act="openDone" data-sid="${s.id}">C'est fait</button><button class="btn btn-ghost" data-act="openNego" data-sid="${s.id}">Négocier</button></div>
     <details class="more"><summary>Déroulé et conseils</summary>${stepsHTML(s)}<p class="muted" style="font-size:13.5px;margin-top:10px">${WHY[s.type]}</p></details></section>`;
+}
+const WX = { at: 0, data: null, busy: false, err: false };
+async function wxLoad(force) {
+  const w = S.wx; if (!w || WX.busy || (!force && WX.data && Date.now() - WX.at < 30 * 60e3)) return;
+  WX.busy = true; WX.err = false;
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${w.la}&longitude=${w.lo}&current=temperature_2m,apparent_temperature,precipitation,weather_code&hourly=temperature_2m,apparent_temperature,precipitation_probability,wind_speed_10m,is_day&timezone=auto&forecast_days=2`;
+    const r = await fetch(u); if (!r.ok) throw 0; WX.data = await r.json(); WX.at = Date.now();
+  } catch (e) { WX.err = true; }
+  WX.busy = false;
+  const el = $('#wx-card'); if (el) el.outerHTML = wxCard(focusSession());
+}
+function wxSlots(s) {
+  const H = WX.data && WX.data.hourly; if (!H) return null;
+  const day = s && s.date > todayISO() ? s.date : todayISO(), now = new Date();
+  const out = [];
+  H.time.forEach((tm, i) => {
+    if (tm.slice(0, 10) !== day) return;
+    const hr = +tm.slice(11, 13); if (hr < 6 || hr > 21 || !H.is_day[i] && hr > 7 && hr < 20) return;
+    if (day === todayISO() && hr < now.getHours() + (now.getMinutes() > 30 ? 1 : 0)) return;
+    const at = H.apparent_temperature[i], rain = H.precipitation_probability[i] || 0, wind = H.wind_speed_10m[i] || 0;
+    const score = rain * 0.9 + Math.abs(at - 11) * 2.2 + Math.max(0, wind - 15) * 0.8 + (H.is_day[i] ? 0 : 6);
+    out.push({ hr, t: H.temperature_2m[i], at, rain, wind, score });
+  });
+  return { day, list: out, best: out.slice().sort((a, b) => a.score - b.score)[0] };
+}
+async function runImage(a) {
+  try { await document.fonts.ready; } catch (e) {}
+  const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d'), s = a.sessionId && findSession(a.sessionId), d = debrief(a);
+  x.fillStyle = '#13402F'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#1F6B4E'; for (let i = 60; i < W; i += 60) for (let j = 60; j < H; j += 60) { x.beginPath(); x.arc(i, j, 2.2, 0, 7); x.fill(); }
+  x.fillStyle = '#F3F5F1'; x.font = '800 92px Outfit, sans-serif'; x.fillText('pora', 90, 190);
+  x.fillStyle = '#CFE8DC'; x.font = '600 40px Figtree, sans-serif'; x.fillText(cap(fmtDate(a.date)), 90, 262);
+  const pts = (a.track || []).filter(Boolean);
+  const box = [110, 340, W - 110, 1130];
+  if (pts.length > 1) {
+    const la0 = pts[0][0], kx = Math.cos(la0 * Math.PI / 180);
+    const P = pts.map(p => [p[1] * kx, -p[0]]); const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+    const mnx = Math.min(...xs), mxx = Math.max(...xs), mny = Math.min(...ys), mxy = Math.max(...ys);
+    const sc = Math.min((box[2] - box[0]) / (mxx - mnx || 1e-9), (box[3] - box[1]) / (mxy - mny || 1e-9));
+    const ox = box[0] + ((box[2] - box[0]) - (mxx - mnx) * sc) / 2, oy = box[1] + ((box[3] - box[1]) - (mxy - mny) * sc) / 2;
+    const T = p => [ox + (p[0] - mnx) * sc, oy + (p[1] - mny) * sc];
+    x.lineJoin = x.lineCap = 'round'; x.strokeStyle = 'rgba(255,106,69,.25)'; x.lineWidth = 34;
+    const path = () => { x.beginPath(); let first = true; (a.track || []).forEach(p => { if (!p) { first = true; return; } const q = T([p[1] * kx, -p[0]]); first ? x.moveTo(q[0], q[1]) : x.lineTo(q[0], q[1]); first = false; }); x.stroke(); };
+    path(); x.strokeStyle = '#FF6A45'; x.lineWidth = 14; path();
+    const a0 = T(P[0]), a1 = T(P[P.length - 1]);
+    [[a0, '#CFE8DC'], [a1, '#FF6A45']].forEach(([q, c]) => { x.fillStyle = '#13402F'; x.beginPath(); x.arc(q[0], q[1], 24, 0, 7); x.fill(); x.fillStyle = c; x.beginPath(); x.arc(q[0], q[1], 15, 0, 7); x.fill(); });
+  } else {
+    x.fillStyle = '#FF6A45'; x.beginPath(); x.arc(W / 2, 735, 150, 0, 7); x.fill();
+    x.fillStyle = '#13402F'; x.font = '700 120px "Barlow Condensed", sans-serif'; x.textAlign = 'center'; x.fillText('GO', W / 2, 778); x.textAlign = 'left';
+  }
+  x.fillStyle = '#CFE8DC'; x.font = '700 44px Figtree, sans-serif'; x.fillText((s ? s.title : 'Sortie libre').slice(0, 34), 90, 1250);
+  x.fillStyle = '#F3F5F1'; x.font = '700 300px "Barlow Condensed", sans-serif'; const km = fmtKm(a.distKm, 2); x.fillText(km, 80, 1520);
+  const kw = x.measureText(km).width; x.fillStyle = '#FF6A45'; x.font = '700 90px "Barlow Condensed", sans-serif'; x.fillText('km', 100 + kw, 1520);
+  const stat = (lbl, v, px) => { x.fillStyle = '#CFE8DC'; x.font = '600 34px Figtree, sans-serif'; x.fillText(lbl, px, 1615); x.fillStyle = '#F3F5F1'; x.font = '700 92px "Barlow Condensed", sans-serif'; x.fillText(v, px, 1705); };
+  stat('Durée', a.durSec ? fmtDur(a.durSec) : '—', 90); stat('Allure /km', a.paceSec ? fmtPace(a.paceSec) : '—', 450);
+  if (a.splits && a.splits.length > 1) stat('Meilleur km', fmtPace(Math.min(...a.splits)), 780);
+  x.fillStyle = '#FF6A45'; x.font = '700 38px Figtree, sans-serif'; x.fillText(`${coachCfg().name} : ${VERDICT[d.verdict][0].toLowerCase()}`.slice(0, 44), 90, 1810);
+  return new Promise(r => cv.toBlob(r, 'image/png'));
+}
+async function shareRun(a) {
+  toast('Création de ton image…');
+  const blob = await runImage(a); if (!blob) return toast("Impossible de créer l'image.");
+  const file = new File([blob], `pora-${a.date}.png`, { type: 'image/png' });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Ma course Pora' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = file.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+  toast('Image enregistrée.');
+}
+function heatSlow(at) { return at >= 21 ? Math.min(35, Math.round((at - 18) * 3 / 5) * 5) : 0; }
+function wxCard(s) {
+  if (!S.wx) return `<section class="card wx" id="wx-card"><div class="wx-row"><span class="wx-ic">☀</span><div><h2 class="h3">La météo de ta séance</h2><p class="muted" style="font-size:13.5px">Le meilleur moment pour courir aujourd'hui, et ton allure corrigée s'il fait chaud.</p></div></div><button class="btn btn-ghost btn-block" data-act="wxOn">Activer la météo</button></section>`;
+  wxLoad();
+  const sl = wxSlots(s);
+  if (!sl) return `<section class="card wx" id="wx-card"><div class="wx-row"><span class="wx-ic">☀</span><div><h2 class="h3">La météo de ta séance</h2><p class="muted" style="font-size:13.5px">${WX.err ? 'Météo indisponible pour le moment.' : 'Chargement de la météo…'}</p></div></div></section>`;
+  const cur = WX.data.current, b = sl.best, isToday = sl.day === todayISO();
+  if (!b) return `<section class="card wx" id="wx-card"><div class="wx-row"><span class="wx-ic">☾</span><div><h2 class="h3">${Math.round(cur.temperature_2m)}° en ce moment</h2><p class="muted" style="font-size:13.5px">Plus de créneau de jour aujourd'hui. Si tu sors, gilet réfléchissant et parcours éclairé.</p></div></div></section>`;
+  const slow = heatSlow(b.at), tips = [];
+  if (slow) { const zk = s ? zoneKey(s) : 'ef', r = zr(zk); tips.push(`Chaleur : ralentis de ${slow} s/km, soit ${fmtPace(r[0] + slow)}–${fmtPace(r[1] + slow)}/km. Bois avant de partir.`); }
+  else if (b.at <= 3) tips.push('Froid : gants et bonnet, et 5 minutes d\'échauffement en plus.');
+  if (b.rain >= 60) tips.push('Pluie probable toute la journée : pas de coton, et une casquette pour les yeux.');
+  if (b.wind >= 30) tips.push('Vent fort : pars face au vent, tu l\'auras dans le dos au retour.');
+  const strip = sl.list.filter((x, i) => i % 2 === 0 || x === b).slice(0, 8);
+  return `<section class="card wx" id="wx-card"><div class="wx-row"><span class="wx-ic">${b.rain >= 50 ? '☂' : b.at >= 21 ? '☀' : '⛅'}</span><div><p class="eyebrow">${isToday ? `Maintenant ${Math.round(cur.temperature_2m)}°` : `Météo ${relDay(sl.day).toLowerCase()}`}</p><h2 class="h3">Meilleur moment : ${b.hr} h</h2><p class="muted" style="font-size:13.5px">${Math.round(b.t)}°, ressenti ${Math.round(b.at)}°, ${b.rain} % de pluie, vent ${Math.round(b.wind)} km/h</p></div></div>
+    <div class="wx-strip">${strip.map(x => `<span class="${x === b ? 'on' : ''}"><small>${x.hr} h</small><b class="num">${Math.round(x.t)}°</b><i style="--r:${x.rain}%">${x.rain} %</i></span>`).join('')}</div>
+    ${tips.map(x => `<p class="wx-tip">${esc(x)}</p>`).join('')}</section>`;
 }
 function checkinCard() {
   const c = S.checkins[todayISO()] || {};
@@ -2595,7 +2701,9 @@ function addPoint(p, exact, acc = 0) {
     while (st.dist >= st.nextKm) {
       const split = (t - st.lastSplit) / 1000; st.splits.push(Math.round(split)); st.lastSplit = t; st.nextKm += 1000;
       try { navigator.vibrate && navigator.vibrate([180, 80, 180]); } catch (e) {}
-      liveToast(`Km ${st.splits.length} · ${fmtPace(split)}`); speak(`Kilomètre ${st.splits.length}. ${paceWords(split)} au kilomètre.`);
+      const k = st.splits.length, gd = st.ghost && st.ghost.length >= k ? Math.round(sum(st.ghost.slice(0, k)) - sum(st.splits)) : null;
+      const gtxt = gd == null ? '' : Math.abs(gd) < 3 ? ' Pile comme la dernière fois.' : gd > 0 ? ` ${gd} secondes d'avance sur la dernière fois.` : ` ${-gd} secondes de retard sur la dernière fois.`;
+      liveToast(`Km ${k} · ${fmtPace(split)}${gd == null ? '' : Math.abs(gd) < 3 ? ' · = dernière fois' : gd > 0 ? ` · −${gd} s` : ` · +${-gd} s`}`); speak(`Kilomètre ${k}. ${paceWords(split)} au kilomètre.${gtxt}`);
     }
   }
   st.pts.push([+p.la.toFixed(6), +p.lo.toFixed(6)]);
@@ -2619,7 +2727,8 @@ function liveCountdown(sim) {
   let n = 3;
   const show = () => { speak(String(n)); $('#live').innerHTML = `<div class="lv"><div class="lv-center"><div class="lv-count pop" aria-live="assertive">${n}</div><p class="lv-hint">${sim ? 'Simulation : le temps passe 15 fois plus vite.' : RUN.gps === 'good' ? 'GPS prêt.' : 'Le GPS se cale pendant le décompte.'}</p><button class="lv-link" data-act="liveCancel">Annuler</button></div></div>`; };
   RUN.loop = null;
-  RUN.st = { sid: RUN.sel, sim, running: false, elapsed: 0, dist: 0, pts: [], trail: [{ t: 0, d: 0 }], last: null, splits: [], nextKm: 1000, lastSplit: 0, gotFix: false, simD: 0, startedAt: Date.now(), date: todayISO(), gpsErr: null };
+  const gs = RUN.sel && findSession(RUN.sel), gt = gs ? gs.type : 'libre', gh = S.acts.filter(x => actType(x) === gt && x.splits && x.splits.length && x.source !== 'sim').sort((x, y) => x.date < y.date ? 1 : -1)[0];
+  RUN.st = { ghost: gh ? gh.splits : null, ghostDate: gh ? gh.date : null, sid: RUN.sel, sim, running: false, elapsed: 0, dist: 0, pts: [], trail: [{ t: 0, d: 0 }], last: null, splits: [], nextKm: 1000, lastSplit: 0, gotFix: false, simD: 0, startedAt: Date.now(), date: todayISO(), gpsErr: null };
   if (!sim) startGeo();
   show();
   RUN.cd = setInterval(() => { n--; if (!RUN.st) return clearInterval(RUN.cd); if (n <= 0) { clearInterval(RUN.cd); beginRun(); } else show(); }, 1000);
@@ -2895,6 +3004,13 @@ const A = {
   skip: el => { S.skips[el.dataset.sid] = true; persist(); render(); },
   unskip: el => { delete S.skips[el.dataset.sid]; persist(); openSheet(sessionSheet(el.dataset.sid)); render(); },
   toggleCoach: () => { UI.allCoach = !UI.allCoach; render(); },
+  shareRun: el => { const a = S.acts.find(x => x.id === el.dataset.id); if (a) shareRun(a); },
+  wxOn: el => {
+    if (!navigator.geolocation) return toast('Localisation indisponible sur cet appareil.');
+    el.disabled = true; el.textContent = 'Localisation…';
+    navigator.geolocation.getCurrentPosition(pos => { S.wx = { la: +pos.coords.latitude.toFixed(2), lo: +pos.coords.longitude.toFixed(2) }; persist(); WX.data = null; const c = $('#wx-card'); if (c) c.outerHTML = wxCard(focusSession()); },
+      () => { el.disabled = false; el.textContent = 'Activer la météo'; toast('Autorise la localisation pour avoir la météo.'); }, { timeout: 15000, maximumAge: 3600e3 });
+  },
   recal: el => { const c = S.coach.find(x => x.id === el.dataset.id); if (!c) return; applyRecal(c); coachSay('bravo', 'Allures recalculées', `Endurance : ${rangeTxt('ef')}/km. Seuil : ${rangeTxt('tempo')}/km. Toutes les séances à venir suivent ces nouvelles allures.`); persist(); render(); if (!$('#sheet').hidden) closeSheet(); toast('Allures mises à jour'); },
   decide: el => { S.decisions[el.dataset.w] = el.dataset.v; if (el.dataset.v === 'assume') { S.overrides++; coachSay('info', 'Noté.', "On avance. Pas de volume en plus cette semaine pour compenser."); } persist(); render(); },
   redoWeek: el => {
