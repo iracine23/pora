@@ -699,6 +699,13 @@ img,svg{-webkit-user-drag:none}
 .wx-strip b{font-size:18px;font-weight:700}
 .wx-strip i{font-style:normal;font-size:10.5px;font-weight:700;opacity:.7;white-space:nowrap}
 .wx-tip{font-size:13.5px;line-height:1.45;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+
+.race{display:grid;gap:10px}
+.race-top{display:flex;gap:14px;align-items:center}
+.race-j{flex:none;width:68px;height:68px;border-radius:18px;background:var(--ink);color:var(--bg);display:grid;place-content:center;justify-items:center;line-height:1}
+.race-j b{font-size:32px;font-weight:700}
+.race-j span{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+.race-line{font-size:14px;line-height:1.45;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{transform:translateY(40px);opacity:.4}}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
@@ -1511,6 +1518,62 @@ Contexte : objectif « ${GOALS.find(g => g[0] === p.goal)[1]} », ${p.days} séa
 ${hist ? 'Conversation jusqu\'ici :\n' + hist + '\n' : ''}Nouvelle question de ${p.first} : ${q}`;
   return prompt;
 }
+function coachSystem() {
+  const c = coachCfg(), p = S.profile, { i, W, info } = ctxWeek(), s = focusSession(), t = todayISO();
+  const acts = S.acts.slice().sort((a, b) => a.date < b.date ? 1 : -1);
+  const recent = acts.slice(0, 6).map((a, k) => `${a.date} ${a.stitle || (a.sessionId && findSession(a.sessionId) ? findSession(a.sessionId).title : 'sortie libre')} : ${a.distKm ? fmtKm(a.distKm, 1) + ' km' : 'distance non notée'}${a.durSec ? ' en ' + fmtDur(a.durSec) : ''}${a.paceSec ? ', ' + fmtPace(a.paceSec) + '/km' : ''}, effort ${a.rpe || '?'}/10${a.pain ? ', gêne ' + a.pain + '/10' : ''}${k === 0 && a.splits && a.splits.length ? ', temps au km ' + a.splits.map(fmtPace).join(' ') : ''}${k === 0 && a.note ? ', note « ' + String(a.note).slice(0, 160) + ' »' : ''}`).join(' ; ');
+  const pains = S.pains.slice(-3).map(x => `${x.date} ${ZONES[x.zone].label} ${x.side || ''} ${x.intensity}/10${x.resolved ? ' (passée)' : ''}`).join(' ; ');
+  const ci = S.checkins[t], r = S.race && S.race.date >= t ? S.race : null;
+  const sT = allSessions().find(x => x.date === t);
+  return `Tu es ${c.name}, le coach de l'appli Pora. Ton style : ${COACH_TONES[c.tone][1]} Tu parles à ${p.first}. Réponds en 110 mots maximum.
+Nous sommes le ${fmtDate(t)}.
+Profil : objectif « ${GOALS.find(g => g[0] === p.goal)[1]} », ${p.days} séances par semaine${p.weeklyKm != null ? ', ' + p.weeklyKm + ' km par semaine au départ' : ''}, séances de ${p.sessionMin || 60} min en semaine, sortie longue jusqu'à ${p.longMin || 90} min, blessures passées : ${(p.injuries || []).map(z => ZONES[z].label).join(', ') || 'aucune'}, quotidien ${({ low: 'calme', mid: 'normal', high: 'très chargé' })[p.life] || 'normal'}.
+Plan : semaine ${i + 1} sur ${S.plan.weeks.length} (${W.deload ? 'semaine allégée' : PHASES[W.phase].name}), ${info.done}/${info.total} séances faites cette semaine, ${fmtKm(info.km)} km sur environ ${fmtKm(info.plannedKm, 0)} prévus.
+Allures : endurance ${rangeTxt('ef')}/km, sortie longue ${rangeTxt('sl')}/km, seuil ${rangeTxt('tempo')}/km, allure 10 km ${rangeTxt('allure')}/km, fractionné ${rangeTxt('frac')}/km. 5 km estimé : ${fmtDur(p.refPace * 5)}.
+Aujourd'hui : ${sT ? (actFor(sT.id) ? `${sT.title}, déjà faite` : `${sT.title} prévue (${sT.steps.map(x => x.label).join(' + ')}), cible ${rangeTxt(zoneKey(sT))}/km`) : 'repos, pas de séance prévue'}. Prochaine séance : ${s ? s.title + ', ' + relDay(s.date).toLowerCase() : 'aucune'}.
+${ci && ci.sleep && ci.legs && ci.mood ? `Forme du jour notée par ${p.first} : sommeil ${ci.sleep}/5, jambes ${ci.legs}/5, envie ${ci.mood}/5.\n` : ''}${r ? `Course objectif : ${r.name}, ${fmtKm(r.distKm, 1)} km, le ${fmtDate(r.date)} (dans ${diffDays(t, r.date)} jours)${r.targetSec ? ', temps visé ' + fmtDur(r.targetSec) : ''}, temps estimé aujourd'hui ${fmtDur(racePred(r.distKm))}.\n` : ''}Dernières courses (la plus récente d'abord) : ${recent || 'aucune pour l\'instant'}.
+Gênes signalées : ${pains || 'aucune'}.`;
+}
+function chatTurns(q) {
+  const t = S.chat.slice(-11, -1).map(m => ({ role: m.me ? 'user' : 'assistant', content: String(m.text).slice(0, 900) }));
+  while (t.length && t[0].role !== 'user') t.shift();
+  return [...t, { role: 'user', content: q }];
+}
+const cleanAI = x => String(x || '').replace(/\*\*/g, '').replace(/^\s*[-•]\s+/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+async function remoteChat(q, onText) {
+  const payload = JSON.stringify({ system: coachSystem(), messages: chatTurns(q), stream: true });
+  for (let n = 0; n < 2; n++) {
+    const ctl = new AbortController(); let timer = setTimeout(() => ctl.abort(), 25000), full = '';
+    try {
+      const r = await fetch(API + '/api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, body: payload, signal: ctl.signal });
+      if (r.ok && r.body && (r.headers.get('content-type') || '').includes('event-stream')) {
+        const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+        for (;;) {
+          const { done, value } = await rd.read(); if (done) break;
+          clearTimeout(timer); timer = setTimeout(() => ctl.abort(), 20000);
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split('\n'); buf = lines.pop();
+          for (const ln of lines) {
+            if (!ln.startsWith('data:')) continue; const d = ln.slice(5).trim(); if (!d || d === '[DONE]') continue;
+            try { const j = JSON.parse(d); if (typeof j.response === 'string') { full += j.response; onText && onText(cleanAI(full)); } } catch (e) {}
+          }
+        }
+      } else if (r.ok) { const j = await r.json(); full = j && j.text || ''; }
+    } catch (e) {} finally { clearTimeout(timer); }
+    if (cleanAI(full)) return cleanAI(full);
+    if (navigator.onLine === false) return null;
+    await new Promise(r => setTimeout(r, 900));
+  }
+  return null;
+}
+function chatSuggs() {
+  const t = todayISO(), out = [], sT = allSessions().find(x => x.date === t), last = S.acts.slice().sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  if (last && diffDays(last.date, t) <= 2) out.push('Analyse ma dernière course');
+  out.push(sT && !actFor(sT.id) ? "Comment réussir ma séance d'aujourd'hui ?" : "Qu'est-ce que je fais demain ?");
+  const pn = S.pains.filter(x => !x.resolved).slice(-1)[0]; if (pn) out.push(`Ma gêne, ${ZONES[pn.zone].label.toLowerCase()} : je peux courir ?`);
+  if (S.race && S.race.date >= t) out.push(`Je serai dans les temps pour ${S.race.name} ?`);
+  return [...new Set([...out, ...CHAT_SUGG])].slice(0, 8);
+}
 async function aiAnswer(q) { const r = await AI(coachPrompt(q), { modelTier: 'default' }); return (r && r.text || '').trim(); }
 function openChat(prefill) {
   if (!S.chat) S.chat = [];
@@ -1526,8 +1589,8 @@ function renderChat() {
   const c = coachCfg(), el = $('#chat');
   const draft = $('#ch-in') ? $('#ch-in').value : '';
   el.innerHTML = `<header class="ch-head"><span class="ch-av">${coachSVG(c, CHAT_BUSY ? 'neutral' : 'happy', 44)}</span><div class="t"><b>${esc(c.name)}</b><small>${CHAT_BUSY ? 'écrit…' : 'Ton coach · répond à toutes tes questions'}</small></div>${S.chat.length > 1 ? `<button class="ch-clear" data-act="chatClear">Effacer</button>` : ''}<button class="ch-x" data-act="closeChat" aria-label="Fermer la conversation">${ic('x')}</button></header>
-  <div class="ch-body" id="ch-body" role="log" aria-live="polite">${S.chat.map(m => m.me ? `<div class="msg me">${esc(m.text)}</div>` : `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot">${esc(m.text)}${m.act ? `<button class="btn btn-primary" style="margin-top:10px;min-height:38px;font-size:13.5px" data-act="${m.act[0]}">${m.act[1]}</button>` : ''}</div></div>`).join('')}${CHAT_BUSY ? `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot typing" aria-label="${esc(c.name)} écrit"><i></i><i></i><i></i></div></div>` : ''}</div>
-  <footer class="ch-foot"><div class="ch-sugg">${CHAT_SUGG.map(s => `<button data-act="chatSugg" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+  <div class="ch-body" id="ch-body" role="log" aria-live="polite">${S.chat.map(m => m.me ? `<div class="msg me">${esc(m.text)}</div>` : `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot">${esc(m.text)}${m.act ? `<button class="btn btn-primary" style="margin-top:10px;min-height:38px;font-size:13.5px" data-act="${m.act[0]}">${m.act[1]}</button>` : ''}</div></div>`).join('')}${CHAT_BUSY ? `<div class="bot-row"><span class="ch-mini">${coachSVG(c, 'neutral', 28)}</span><div class="msg bot typing" id="ch-typing" aria-label="${esc(c.name)} écrit"><i></i><i></i><i></i></div></div>` : ''}</div>
+  <footer class="ch-foot"><div class="ch-sugg">${chatSuggs().map(s => `<button data-act="chatSugg" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
   <form id="chatForm" class="ch-form" novalidate><label for="ch-in" class="sr">Ta question</label><textarea id="ch-in" rows="1" placeholder="Écris ta question…" enterkeyhint="send">${esc(draft)}</textarea><button class="ch-send" type="submit" aria-label="Envoyer" ${CHAT_BUSY ? 'disabled' : ''}>${ic('send')}</button></form></footer>`;
   const b = $('#ch-body'); b.scrollTop = b.scrollHeight;
 }
@@ -1538,7 +1601,7 @@ async function chatSend(q) {
   CHAT_BUSY = true; renderChat();
   let ans = null;
   if (AI) { try { const t = await aiAnswer(q); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; } catch (e) { ans = null; } }
-  if (!ans) { const t = await remoteAnswer(coachPrompt(q), true); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; }
+  if (!ans) { const t = await remoteChat(q, txt => { const el = $('#ch-typing'); if (!el) return; if (el.classList.contains('typing')) { el.classList.remove('typing'); el.removeAttribute('aria-label'); } el.textContent = txt; const b = $('#ch-body'); if (b) b.scrollTop = b.scrollHeight; }); if (t) ans = { text: t, act: PAIN_WORDS.some(w => (' ' + norm(q) + ' ').includes(w)) ? ['chatPain', 'Situer ma gêne'] : null }; }
   if (!ans) { await new Promise(r => setTimeout(r, 450 + Math.random() * 350)); ans = localAnswer(q); }
   CHAT_BUSY = false;
   S.chat.push({ me: false, text: ans.text, act: ans.act || null, t: Date.now() }); S.chat = S.chat.slice(-40);
@@ -1685,6 +1748,8 @@ async function remoteAnswer(prompt, retry) {
   }
   return null;
 }
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !(window.claude && typeof window.claude.use === 'function')) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+window.addEventListener('online', () => { try { cloudSchedule(); } catch (e) {} });
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function newSyncCode() {
   const b = new Uint8Array(16); crypto.getRandomValues(b);
@@ -1702,7 +1767,7 @@ async function cloudSave() {
   if (Cloud.busy) { Cloud.again = true; return; }
   Cloud.busy = true;
   try {
-    const r = await fetch('/api/sync', { method: 'PUT', headers: { 'content-type': 'application/json', 'x-pora-key': S.syncKey }, body: JSON.stringify(S) });
+    const r = await fetch(API + '/api/sync', { method: 'PUT', headers: { 'content-type': 'application/json', 'x-pora-key': S.syncKey }, body: JSON.stringify(S) });
     Cloud.status = r.ok ? 'ok' : 'error'; if (r.ok) Cloud.at = Date.now();
   } catch (e) { Cloud.status = 'error'; }
   Cloud.busy = false;
@@ -1710,7 +1775,7 @@ async function cloudSave() {
   const el = $('#cloud-state'); if (el) el.outerHTML = cloudStateHTML();
 }
 async function cloudFetch(code) {
-  const r = await fetch('/api/sync', { headers: { 'x-pora-key': code } });
+  const r = await fetch(API + '/api/sync', { headers: { 'x-pora-key': code } });
   if (r.status === 404) return { missing: true };
   if (!r.ok) throw new Error('http ' + r.status);
   return { data: await r.json() };
@@ -2075,6 +2140,7 @@ function renderToday() {
   let h = `<header class="top">${logoHTML('wordmark', 'applogo')}<button class="avatar" data-act="tab" data-tab="profile" aria-label="Ton profil">${esc(initials())}</button></header><div><p class="eyebrow">${cap(fmtDate(t))}</p><h1 class="h1">Salut ${esc(p.first)}.</h1></div>`;
   h += demoBanner();
   h += reviewCard(weeklyReview());
+  h += raceCard();
   h += redoPrompt(idx);
   const s = focusSession();
   if (idx >= n && !s) h += `<section class="hero"><p class="eyebrow">Cycle terminé</p><h2 class="h2">${n} semaines bouclées.</h2><p class="muted">Ton 5 km estimé : ${fmtDur(p.refPace * 5)}. On repart sur un nouveau cycle avec tes allures actuelles et ta sortie longue la plus récente.</p><button class="btn btn-primary" data-act="newCycle">Lancer le cycle suivant</button></section>`;
@@ -2093,6 +2159,7 @@ function renderToday() {
   const feed = S.coach.slice(0, UI.allCoach ? 40 : 2);
   if (feed.length) h += `<section class="stack"><div class="section-title"><h2 class="h2">Les retours de ${esc(coachCfg().name)}</h2>${S.coach.length > 2 ? `<button class="link" data-act="toggleCoach">${UI.allCoach ? 'Réduire' : 'Tout voir'}</button>` : ''}</div><div class="coach-list">${feed.map(coachItem).join('')}</div></section>`;
   h += `<button class="btn btn-line btn-block" data-act="openLog" data-sid="">${ic('plus')} Ajouter une course faite ailleurs</button>`;
+  if (!S.race || diffDays(t, S.race.date) < -10) h += `<button class="btn btn-line btn-block" data-act="openRace">Me fixer une course objectif</button>`;
   return h;
 }
 function sessionHero(s, preStart) {
@@ -2174,6 +2241,45 @@ async function shareRun(a) {
   const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = file.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
   toast('Image enregistrée.');
 }
+const racePred = d => S.profile.refPace * 5 * Math.pow(d / 5, 1.06);
+const RACE_D = [[5, '5 km'], [10, '10 km'], [21.0975, 'Semi'], [42.195, 'Marathon']];
+function raceSheet() {
+  const r = S.race || {}, t = todayISO();
+  return `<p class="eyebrow">Mon objectif</p><h2 class="h1" style="padding-right:44px">Une course à préparer</h2><p class="muted">Une date change tout : chaque séance sert à quelque chose. Le coach suit où tu en es par rapport à ton objectif.</p>
+  <form id="raceForm" class="stack" novalidate>
+    <div class="field"><label for="rc-name">Nom de la course</label><input class="input" id="rc-name" maxlength="40" placeholder="10 km de ma ville" value="${esc(r.name || '')}"></div>
+    <div class="field"><label for="rc-date">Date</label><input class="input" type="date" id="rc-date" min="${t}" value="${r.date || ''}"></div>
+    <div class="field"><span class="flabel">Distance</span><div class="seg" style="grid-template-columns:repeat(4,1fr)" role="radiogroup" aria-label="Distance">${RACE_D.map(([d, l]) => `<label style="font-size:13px"><input type="radio" name="rdist" value="${d}" ${Math.abs((r.distKm || 10) - d) < 0.1 ? 'checked' : ''}>${l}</label>`).join('')}</div></div>
+    <div class="field"><label for="rc-target">Temps visé (facultatif)</label><input class="input num" id="rc-target" inputmode="numeric" placeholder="58:00 ou 1:05:00" value="${r.targetSec ? fmtDur(r.targetSec) : ''}"><small class="muted">Laisse vide si tu veux juste la finir.</small></div>
+    <button class="btn btn-primary btn-block" type="submit">Enregistrer mon objectif</button>
+  </form>${S.race ? `<button class="btn btn-ghost btn-block" data-act="raceDel">Supprimer cet objectif</button>` : ''}`;
+}
+function raceSave() {
+  const name = $('#rc-name').value.trim() || 'Ma course', date = $('#rc-date').value, f = $('#raceForm');
+  if (!date || date < todayISO()) return toast('Choisis une date à venir.');
+  const distKm = +(f.querySelector('input[name=rdist]:checked')?.value || 10);
+  let tg = parseDur($('#rc-target').value); if (tg && tg < distKm * 150) tg *= 60; // « 1:05 » pour un 10 km = 1 h 05
+  if (tg && (tg < distKm * 150 || tg > distKm * 720)) return toast('Ce temps visé ne semble pas correct.');
+  S.race = { name, date, distKm, targetSec: tg || null, setAt: todayISO() };
+  const pred = racePred(distKm);
+  coachSay('info', `Objectif noté : ${name}`, tg ? (pred <= tg ? `Aujourd'hui, tes tests donnent ${fmtDur(pred)} : ton objectif de ${fmtDur(tg)} est déjà à ta portée. On construit l'endurance pour le tenir jusqu'au bout.` : `Aujourd'hui, tes tests donnent ${fmtDur(pred)} pour un objectif de ${fmtDur(tg)}. Il reste ${Math.round((pred - tg) / distKm)} s/km à gagner en ${diffDays(todayISO(), date)} jours : c'est le travail du plan.`) : `Tu as ${diffDays(todayISO(), date)} jours. Aujourd'hui, tes tests donnent environ ${fmtDur(pred)}.`);
+  persist(); closeSheet(); render();
+}
+function raceCard() {
+  const r = S.race, t = todayISO(); if (!r) return '';
+  const dd = diffDays(t, r.date);
+  if (dd < -10) return '';
+  if (dd < 0) return `<section class="card race"><p class="eyebrow">${esc(r.name)}</p><h2 class="h3">Alors, cette course ?</h2><p class="muted" style="font-size:13.5px">Ajoute-la pour avoir ton bilan, et fixe la suivante.</p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-primary" style="min-height:40px" data-act="openLog" data-sid="">Ajouter ma course</button><button class="btn btn-ghost" style="min-height:40px" data-act="openRace">Nouvel objectif</button></div></section>`;
+  const pred = racePred(r.distKm), longest = Math.max(0, ...S.acts.map(a => a.distKm || 0)), need = Math.min(r.distKm * 0.75, 32);
+  const lines = [];
+  if (dd === 0) lines.push("C'est aujourd'hui. Rien de nouveau : mêmes chaussures, même petit-déjeuner. Pars un peu plus lentement que ton allure cible, tu accéléreras après la mi-course.");
+  else if (dd <= 7) lines.push("Semaine de course : plus de séance dure après mercredi, deux footings courts et faciles, et du sommeil. La forme est déjà faite.");
+  else if (r.targetSec) lines.push(pred <= r.targetSec ? `Tu es dans les temps : estimé ${fmtDur(pred)} pour un objectif de ${fmtDur(r.targetSec)}.` : `Estimé aujourd'hui ${fmtDur(pred)} pour un objectif de ${fmtDur(r.targetSec)} : ${Math.round((pred - r.targetSec) / r.distKm)} s/km à gagner. Ton prochain test dira où tu en es.`);
+  else lines.push(`Temps estimé aujourd'hui : ${fmtDur(pred)}.`);
+  if (dd > 7 && longest < need) lines.push(`Endurance : ta plus longue sortie fait ${fmtKm(longest, 1)} km. Vise ${fmtKm(need, 0)} km avant le jour J.`);
+  const pace = (r.targetSec || pred) / r.distKm;
+  return `<section class="card race"><div class="race-top"><div class="race-j"><b class="num">${dd === 0 ? 'J' : dd}</b><span>${dd === 0 ? 'Jour J' : dd === 1 ? 'jour' : 'jours'}</span></div><div style="min-width:0"><p class="eyebrow">${cap(fmtDate(r.date))} · ${fmtKm(r.distKm, 1)} km</p><h2 class="h3">${esc(r.name)}</h2><p class="muted" style="font-size:13px">Allure de course : ${fmtPace(pace)}/km</p></div><button class="link" style="flex:none;align-self:flex-start" data-act="openRace">Modifier</button></div>${lines.map(x => `<p class="race-line">${esc(x)}</p>`).join('')}</section>`;
+}
 function heatSlow(at) { return at >= 21 ? Math.min(35, Math.round((at - 18) * 3 / 5) * 5) : 0; }
 function wxCard(s) {
   if (!S.wx) return `<section class="card wx" id="wx-card"><div class="wx-row"><span class="wx-ic">☀</span><div><h2 class="h3">La météo de ta séance</h2><p class="muted" style="font-size:13.5px">Le meilleur moment pour courir aujourd'hui, et ton allure corrigée s'il fait chaud.</p></div></div><button class="btn btn-ghost btn-block" data-act="wxOn">Activer la météo</button></section>`;
@@ -2187,7 +2293,7 @@ function wxCard(s) {
   else if (b.at <= 3) tips.push('Froid : gants et bonnet, et 5 minutes d\'échauffement en plus.');
   if (b.rain >= 60) tips.push('Pluie probable toute la journée : pas de coton, et une casquette pour les yeux.');
   if (b.wind >= 30) tips.push('Vent fort : pars face au vent, tu l\'auras dans le dos au retour.');
-  const strip = sl.list.filter((x, i) => i % 2 === 0 || x === b).slice(0, 8);
+  const step = Math.max(1, Math.ceil(sl.list.length / 6)), strip = sl.list.filter((x, i) => i % step === 0 || x === b).slice(0, 7);
   return `<section class="card wx" id="wx-card"><div class="wx-row"><span class="wx-ic">${b.rain >= 50 ? '☂' : b.at >= 21 ? '☀' : '⛅'}</span><div><p class="eyebrow">${isToday ? `Maintenant ${Math.round(cur.temperature_2m)}°` : `Météo ${relDay(sl.day).toLowerCase()}`}</p><h2 class="h3">Meilleur moment : ${b.hr} h</h2><p class="muted" style="font-size:13.5px">${Math.round(b.t)}°, ressenti ${Math.round(b.at)}°, ${b.rain} % de pluie, vent ${Math.round(b.wind)} km/h</p></div></div>
     <div class="wx-strip">${strip.map(x => `<span class="${x === b ? 'on' : ''}"><small>${x.hr} h</small><b class="num">${Math.round(x.t)}°</b><i style="--r:${x.rain}%">${x.rain} %</i></span>`).join('')}</div>
     ${tips.map(x => `<p class="wx-tip">${esc(x)}</p>`).join('')}</section>`;
@@ -2258,7 +2364,7 @@ function renderProgress() {
   h += demoBanner();
   h += `<section class="card stack"><div class="between"><span class="eyebrow">Ton 5 km estimé</span>${Math.abs(delta) >= 3 ? `<span class="pill ${delta > 0 ? 'good' : 'warn'}">${delta > 0 ? '−' : '+'}${fmtDur(Math.abs(delta))} depuis le début</span>` : ''}</div><div class="big5k">${fmtDur(p.refPace * 5)}</div><p class="muted" style="font-size:13.5px">Calculé sur ${hist.length > 1 ? 'ton dernier test' : 'ton estimation de départ'}. Chaque test le met à jour, et toutes tes allures avec.</p>${hist.length > 1 ? refChart(hist) : ''}</section>`;
   { const t5 = p.refPace * 5, pr = d => t5 * Math.pow(d / 5, 1.06), longest = Math.max(0, ...acts.map(a => a.distKm || 0));
-    h += `<section class="card stack"><div><h2 class="h3">Tes temps estimés aujourd'hui</h2><p class="muted" style="font-size:13px">Calculés à partir de ton dernier test. Ils évoluent à chaque nouveau test.</p></div><div class="kpis"><div class="kpi"><b>${fmtDur(pr(5))}</b><span>5 km</span></div><div class="kpi"><b>${fmtDur(pr(10))}</b><span>10 km</span></div><div class="kpi"><b>${fmtDur(pr(21.0975))}</b><span>semi-marathon</span></div></div>${longest ? `<p class="muted" style="font-size:12.5px">Pour le 10 km et le semi, il faut aussi l'endurance : ta plus longue sortie est de ${fmtKm(longest, 1)} km.</p>` : ''}</section>`; }
+    h += `<section class="card stack"><div><h2 class="h3">Tes temps estimés aujourd'hui</h2><p class="muted" style="font-size:13px">Calculés à partir de ton dernier test. Ils évoluent à chaque nouveau test.</p></div><div class="kpis"><div class="kpi"><b>${fmtDur(pr(5))}</b><span>5 km</span></div><div class="kpi"><b>${fmtDur(pr(10))}</b><span>10 km</span></div><div class="kpi"><b>${fmtDur(pr(21.0975))}</b><span>semi-marathon</span></div></div>${longest ? `<p class="muted" style="font-size:12.5px">Pour le 10 km et le semi, il faut aussi l'endurance : ta plus longue sortie est de ${fmtKm(longest, 1)} km.</p>` : ''}<button class="btn btn-ghost btn-block" data-act="openRace">${S.race && S.race.date >= todayISO() ? `Mon objectif : ${esc(S.race.name)}` : 'Me fixer une course objectif'}</button></section>`; }
   h += `<section class="kpis"><div class="kpi"><b>${fmtKm(totalKm, 0)}</b><span>km au total</span></div><div class="kpi"><b>${doneN}/${past.length}</b><span>séances faites</span></div><div class="kpi"><b>${past.length ? Math.round(doneN / past.length * 100) : 0} %</b><span>régularité</span></div></section>`;
   h += `<section class="card stack"><div class="between"><h2 class="h3">Allure par séance</h2><span class="chip" style="--c:var(--z-ef)">Zone endurance</span></div>${paceChart(acts)}</section>`;
   h += `<section class="card stack"><div class="between"><h2 class="h3">Kilomètres par semaine</h2><span class="muted" style="font-size:12.5px">plein : fait · contour : prévu</span></div>${volumeChart()}</section>`;
@@ -3004,6 +3110,8 @@ const A = {
   skip: el => { S.skips[el.dataset.sid] = true; persist(); render(); },
   unskip: el => { delete S.skips[el.dataset.sid]; persist(); openSheet(sessionSheet(el.dataset.sid)); render(); },
   toggleCoach: () => { UI.allCoach = !UI.allCoach; render(); },
+  openRace: () => openSheet(raceSheet()),
+  raceDel: () => { delete S.race; persist(); closeSheet(); render(); toast('Objectif supprimé.'); },
   shareRun: el => { const a = S.acts.find(x => x.id === el.dataset.id); if (a) shareRun(a); },
   wxOn: el => {
     if (!navigator.geolocation) return toast('Localisation indisponible sur cet appareil.');
@@ -3125,6 +3233,7 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target;
   if (f.id === 'chatForm') { chatSend($('#ch-in').value); return; }
+  if (f.id === 'raceForm') { raceSave(); return; }
   if (f.id === 'restoreForm') { restoreWith($('#rs-code').value); return; }
   if (f.id === 'logForm') submitLog(f);
   if (f.id === 'runForm') {
